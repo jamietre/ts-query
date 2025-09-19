@@ -1,10 +1,10 @@
 import { AliasGenerator } from "./aliasGenerator.js";
 import { CompoundQueryBuilder } from "./compoundQueryBuilder.js";
-import type { Query, QueryFieldsBase } from "./types/query.js";
+import type { Query, FieldsBase } from "./types/query.js";
 
 export type JoinType = "INNER" | "LEFT";
 
-export class JoinBuilder<T extends QueryFieldsBase, U extends QueryFieldsBase> {
+export class JoinBuilder<T extends FieldsBase, U extends FieldsBase> {
   readonly query1: Query<T>;
   readonly query2: Query<U>;
   readonly joinType: JoinType;

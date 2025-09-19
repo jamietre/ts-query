@@ -3,14 +3,14 @@ import { SelectBuilder } from "./selectBuilder.js";
 import { JoinBuilder } from "./joinBuilder.js";
 import { LimitBuilder } from "./limitBuilder.js";
 import { OrderByBuilder } from "./orderByBuilder.js";
-import type { Query, WhereCondition, Queryable, QueryFieldsBase } from "./types/query.js";
+import type { Query, WhereCondition, Queryable, FieldsBase } from "./types/query.js";
 import type { Select } from "./types/select.js";
 import type { Join } from "./types/join.js";
 import type { Limit } from "./types/limit.js";
 import type { Where, Condition, OrCondition } from "./types/where.js";
 import type { OrderBy, OrderDirection } from "./types/orderBy.js";
 
-export class WhereBuilder<T extends QueryFieldsBase> implements Where<T> {
+export class WhereBuilder<T extends FieldsBase> implements Where<T> {
   readonly query: Query<T>;
   readonly conditions: WhereCondition<T>;
   readonly orConditions: OrCondition<T>[] = [];
@@ -38,7 +38,7 @@ export class WhereBuilder<T extends QueryFieldsBase> implements Where<T> {
     return new SelectBuilder<T>(this, fields);
   }
 
-  join<U extends QueryFieldsBase>(tableName: string | Queryable<U>, tableAlias?: string): Join<T, U> {
+  join<U extends FieldsBase>(tableName: string | Queryable<U>, tableAlias?: string): Join<T, U> {
     if (typeof tableName === "string") {
       const newQuery = new QueryBuilder<U>({ tableName, tableAlias, aliasGenerator: this.aliasGenerator });
       return new JoinBuilder<T, U>({ query1: this, query2: newQuery, joinType: "INNER" });
@@ -53,11 +53,11 @@ export class WhereBuilder<T extends QueryFieldsBase> implements Where<T> {
     }
   }
 
-  innerJoin<U extends QueryFieldsBase>(entity: string | Queryable<U>, alias?: string): Join<T, U> {
+  innerJoin<U extends FieldsBase>(entity: string | Queryable<U>, alias?: string): Join<T, U> {
     return this.join<U>(entity, alias);
   }
 
-  leftJoin<U extends QueryFieldsBase>(entity: string | Queryable<U>, alias?: string): Join<T, U> {
+  leftJoin<U extends FieldsBase>(entity: string | Queryable<U>, alias?: string): Join<T, U> {
     if (typeof entity === "string") {
       const newQuery = new QueryBuilder<U>({
         tableName: entity,

@@ -5,14 +5,14 @@ import { WhereBuilder } from "./whereBuilder.js";
 import { OrderByBuilder } from "./orderByBuilder.js";
 import { LimitBuilder } from "./limitBuilder.js";
 import { AliasGenerator } from "./aliasGenerator.js";
-import type { Query, WhereCondition, Queryable, QueryFieldsBase } from "./types/query.js";
+import type { Query, WhereCondition, Queryable, FieldsBase } from "./types/query.js";
 import type { Join } from "./types/join.js";
 import type { Select } from "./types/select.js";
 import type { Where } from "./types/where.js";
 import type { OrderBy, OrderDirection } from "./types/orderBy.js";
 import type { Limit } from "./types/limit.js";
 
-export class CompoundQueryBuilder<T extends QueryFieldsBase, U extends QueryFieldsBase> implements Query<T & U> {
+export class CompoundQueryBuilder<T extends FieldsBase, U extends FieldsBase> implements Query<T & U> {
   readonly query1: Query<T>;
   readonly query2: Query<U>;
   readonly joinInfo: JoinBuilder<T, U>;
@@ -33,7 +33,7 @@ export class CompoundQueryBuilder<T extends QueryFieldsBase, U extends QueryFiel
   select(fields: Array<keyof T | keyof U> | Partial<Record<keyof T | keyof U, string>>): Select<T & U> {
     return new SelectBuilder<T & U>(this as Query<T & U>, fields);
   }
-  join<V extends QueryFieldsBase>(tableName: string | Queryable<V>, tableAlias?: string): Join<T & U, V> {
+  join<V extends FieldsBase>(tableName: string | Queryable<V>, tableAlias?: string): Join<T & U, V> {
     if (typeof tableName === "string") {
       const newQuery = new QueryBuilder<V>({ tableName, tableAlias, aliasGenerator: this.aliasGenerator });
       return new JoinBuilder<T & U, V>({ query1: this, query2: newQuery, joinType: "INNER" });
@@ -47,11 +47,11 @@ export class CompoundQueryBuilder<T extends QueryFieldsBase, U extends QueryFiel
     }
   }
 
-  innerJoin<V extends QueryFieldsBase>(tableName: string | Queryable<V>, tableAlias?: string): Join<T & U, V> {
+  innerJoin<V extends FieldsBase>(tableName: string | Queryable<V>, tableAlias?: string): Join<T & U, V> {
     return this.join<V>(tableName, tableAlias);
   }
 
-  leftJoin<V extends QueryFieldsBase>(tableName: string | Queryable<V>, tableAlias?: string): Join<T & U, V> {
+  leftJoin<V extends FieldsBase>(tableName: string | Queryable<V>, tableAlias?: string): Join<T & U, V> {
     if (typeof tableName === "string") {
       const newQuery = new QueryBuilder<V>({ tableName, tableAlias, aliasGenerator: this.aliasGenerator });
       return new JoinBuilder<T & U, V>({ query1: this, query2: newQuery, joinType: "LEFT" });

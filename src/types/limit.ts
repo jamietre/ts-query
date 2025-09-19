@@ -1,6 +1,6 @@
 import { Select } from "./select.js";
-import { QueryFieldsBase } from "./query.js";
+import { FieldsBase } from "./query.js";
 
-export interface Limit<T extends QueryFieldsBase> extends Select<T> {
+export interface Limit<T extends FieldsBase> extends Select<T> {
   offset(offsetValue: number): Select<T>;
 }

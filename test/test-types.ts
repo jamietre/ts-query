@@ -1,28 +1,28 @@
-import { QueryFieldsBase } from "../src/index.js";
+import { TableFieldsBase } from "../src/index.js";
 
 export type TableFields = {
   game_id: number;
   game_name: string;
   release_year: number;
-} & QueryFieldsBase;
+} & TableFieldsBase;
 
 export type TableFields2 = {
   game_id: number;
   description: string;
-} & QueryFieldsBase;
+} & TableFieldsBase;
 
 export type PublisherFields = {
   game_id: number;
   publisher_name: string;
-} & QueryFieldsBase;
+} & TableFieldsBase;
 
 export type PlatformFields = {
   game_id: number;
   platform_name: string;
-} & QueryFieldsBase;
+} & TableFieldsBase;
 
 export type ComplexJoinFields = {
   game_id: number;
   developer_id: number;
   description: string;
-} & QueryFieldsBase;
+} & TableFieldsBase;

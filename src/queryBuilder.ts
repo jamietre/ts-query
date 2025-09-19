@@ -4,14 +4,14 @@ import { WhereBuilder } from "./whereBuilder.js";
 import { OrderByBuilder } from "./orderByBuilder.js";
 import { LimitBuilder } from "./limitBuilder.js";
 import { AliasGenerator } from "./aliasGenerator.js";
-import type { Query, WhereCondition, Queryable, QueryFieldsBase } from "./types/query.js";
+import type { Query, WhereCondition, Queryable, FieldsBase } from "./types/query.js";
 import type { Join } from "./types/join.js";
 import type { Select } from "./types/select.js";
 import type { Where } from "./types/where.js";
 import type { OrderBy, OrderDirection } from "./types/orderBy.js";
 import type { Limit } from "./types/limit.js";
 
-export class QueryBuilder<T extends QueryFieldsBase> implements Query<T> {
+export class QueryBuilder<T extends FieldsBase> implements Query<T> {
   readonly tableName: string;
   readonly tableAlias: string;
   private aliasGenerator: AliasGenerator;
@@ -30,7 +30,7 @@ export class QueryBuilder<T extends QueryFieldsBase> implements Query<T> {
     return new SelectBuilder<T>(this, fields);
   }
 
-  join<U extends QueryFieldsBase>(tableName: string | Queryable<U>, tableAlias?: string): Join<T, U> {
+  join<U extends FieldsBase>(tableName: string | Queryable<U>, tableAlias?: string): Join<T, U> {
     if (typeof tableName === "string") {
       const newQuery = new QueryBuilder<U>({ tableName, tableAlias, aliasGenerator: this.aliasGenerator });
       return new JoinBuilder<T, U>({ query1: this, query2: newQuery, joinType: "INNER" });
@@ -44,11 +44,11 @@ export class QueryBuilder<T extends QueryFieldsBase> implements Query<T> {
     }
   }
 
-  innerJoin<U extends QueryFieldsBase>(entity: string | Queryable<U>, alias?: string): Join<T, U> {
+  innerJoin<U extends FieldsBase>(entity: string | Queryable<U>, alias?: string): Join<T, U> {
     return this.join<U>(entity, alias);
   }
 
-  leftJoin<U extends QueryFieldsBase>(tableName: string | Queryable<U>, tableAlias?: string): Join<T, U> {
+  leftJoin<U extends FieldsBase>(tableName: string | Queryable<U>, tableAlias?: string): Join<T, U> {
     if (typeof tableName === "string") {
       const newQuery = new QueryBuilder<U>({ tableName, tableAlias, aliasGenerator: this.aliasGenerator });
       return new JoinBuilder<T, U>({ query1: this, query2: newQuery, joinType: "LEFT" });

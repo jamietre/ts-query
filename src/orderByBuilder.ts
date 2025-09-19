@@ -1,12 +1,12 @@
 import { SelectBuilder } from "./selectBuilder.js";
 import { LimitBuilder } from "./limitBuilder.js";
-import type { Query, QueryFieldsBase } from "./types/query.js";
+import type { Query, FieldsBase } from "./types/query.js";
 import type { Select } from "./types/select.js";
 import type { OrderBy, OrderDirection } from "./types/orderBy.js";
 import type { Limit } from "./types/limit.js";
 import { AliasGenerator } from "./aliasGenerator.js";
 
-export class OrderByBuilder<T extends QueryFieldsBase> implements OrderBy<T> {
+export class OrderByBuilder<T extends FieldsBase> implements OrderBy<T> {
   query: Query<T>;
   orderFields: Array<{ field: keyof T; direction: OrderDirection }> = [];
   aliasGenerator: AliasGenerator;

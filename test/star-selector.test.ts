@@ -1,11 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { queryBuilder, QueryFieldsBase } from "../src/index.js";
+import { queryBuilder, TableFieldsBase } from "../src/index.js";
 
-// Test type that extends QueryFieldsBase
+// Test type that extends TableFieldsBase
 type TestTable = {
   id: number;
   name: string;
-} & QueryFieldsBase;
+} & TableFieldsBase;
 
 describe("Star selector functionality", () => {
   it("should support selecting all fields with '*'", () => {
@@ -30,10 +30,7 @@ describe("Star selector functionality", () => {
   });
 
   it("should support '*' in queries with WHERE clauses", () => {
-    const query = queryBuilder
-      .from<TestTable>("test", "t")
-      .where({ id: 1 })
-      .select(["*"]);
+    const query = queryBuilder.from<TestTable>("test", "t").where({ id: 1 }).select(["*"]);
 
     const sql = query.toString();
     expect(sql).toBe("SELECT * FROM test AS t WHERE t.id = 1");
@@ -51,20 +48,14 @@ describe("Star selector functionality", () => {
   });
 
   it("should support '*' with LIMIT", () => {
-    const query = queryBuilder
-      .from<TestTable>("test", "t")
-      .limit(10)
-      .select(["*"]);
+    const query = queryBuilder.from<TestTable>("test", "t").limit(10).select(["*"]);
 
     const sql = query.toString();
     expect(sql).toBe("SELECT * FROM test AS t LIMIT 10");
   });
 
   it("should support '*' with ORDER BY", () => {
-    const query = queryBuilder
-      .from<TestTable>("test", "t")
-      .orderBy("name", "ASC")
-      .select(["*"]);
+    const query = queryBuilder.from<TestTable>("test", "t").orderBy("name", "ASC").select(["*"]);
 
     const sql = query.toString();
     expect(sql).toBe("SELECT * FROM test AS t ORDER BY t.name ASC");

@@ -1,7 +1,7 @@
-import { Query, QueryFieldsBase } from "./query.js";
+import { Query, FieldsBase } from "./query.js";
 
-export type JoinType = 'INNER' | 'LEFT';
+export type JoinType = "INNER" | "LEFT";
 
-export interface Join<T extends QueryFieldsBase, U extends QueryFieldsBase> {
+export interface Join<T extends FieldsBase, U extends FieldsBase> {
   on(condition: Partial<Record<keyof T, keyof U>>): Query<T & U>;
 }

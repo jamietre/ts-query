@@ -3,9 +3,9 @@ import { QueryBuilder } from "./queryBuilder.js";
 import { WhereBuilder } from "./whereBuilder.js";
 import { LimitBuilder } from "./limitBuilder.js";
 import { OrderByBuilder } from "./orderByBuilder.js";
-import type { Queryable, QueryFieldsBase } from "./types/query.js";
+import type { Queryable, FieldsBase } from "./types/query.js";
 import type { Select } from "./types/select.js";
-export class SelectBuilder<T extends QueryFieldsBase> implements Select<T> {
+export class SelectBuilder<T extends FieldsBase> implements Select<T> {
   query: Queryable<T>;
   fields: Partial<Record<keyof T, string>> = {};
 

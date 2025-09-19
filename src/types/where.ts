@@ -1,8 +1,8 @@
 import { Limit } from "./limit.js";
 import { OrderBy, OrderDirection } from "./orderBy.js";
-import type { WhereCondition, Queryable, Query, QueryFieldsBase } from "./query.js";
+import type { WhereCondition, Queryable, Query, FieldsBase } from "./query.js";
 
-export type Condition<T extends QueryFieldsBase> = {
+export type Condition<T extends FieldsBase> = {
   [K in keyof T]?:
     | T[K]
     | { $eq: T[K] }
@@ -15,12 +15,12 @@ export type Condition<T extends QueryFieldsBase> = {
     | { $like: string };
 };
 
-export type OrCondition<T extends QueryFieldsBase> = {
+export type OrCondition<T extends FieldsBase> = {
   type: "or";
   conditions: Condition<T>;
 };
 
-export interface Where<T extends QueryFieldsBase> extends Query<T>, Queryable<T> {
+export interface Where<T extends FieldsBase> extends Query<T>, Queryable<T> {
   where(conditions: WhereCondition<T>): Where<T>;
   or(conditions: Condition<T>): Where<T>;
   orderBy(field: keyof T, direction?: OrderDirection): OrderBy<T>;
