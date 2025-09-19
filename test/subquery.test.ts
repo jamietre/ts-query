@@ -1,92 +1,106 @@
-import { describe, it, expect } from 'vitest';
-import { QueryBuilder } from '../src/index';
-import { TableFields, TableFields2 } from './test-types';
+import { describe, it, expect } from "vitest";
+import { queryBuilder } from "../src/index";
+import { TableFields, TableFields2 } from "./test-types";
+import { Queryable } from "../src/types/query";
 
-describe('Subquery functionality', () => {
-  it('should handle simple subquery with alias', () => {
-    const subquery = QueryBuilder.from<TableFields>('games', 'g')
-      .where({ release_year: { $gt: 2000 } });
+describe("Subquery functionality", () => {
+  it("should handle simple subquery with alias", () => {
+    const subquery = queryBuilder.from<TableFields>("games", "g").where({ release_year: { $gt: 2000 } });
 
-    const query = QueryBuilder.from<TableFields>('outer_games', 'og')
+    const query = queryBuilder
+      .from(subquery, "recent_games_count")
       .where({ game_id: 1 })
-      .select(subquery, 'recent_games_count');
+      .select(["game_id", "game_name"]);
 
     const sql = query.toString();
-    expect(sql).toBe('SELECT (SELECT * FROM games AS g WHERE g.release_year > 2000) AS recent_games_count FROM outer_games AS og WHERE og.game_id = 1');
+    expect(sql).toBe(
+      "SELECT game_id, game_name FROM (SELECT * FROM games AS g WHERE g.release_year > 2000) AS recent_games_count WHERE recent_games_count.game_id = 1",
+    );
   });
 
-  it('should handle subquery with join in main query', () => {
-    const subquery = QueryBuilder.from<TableFields>('games', 'g')
-      .where({ release_year: { $gt: 2020 } });
+  it("should handle subquery with join in main query", () => {
+    const subquery = queryBuilder.from<TableFields>("recent_games", "rg").where({ release_year: { $gt: 2020 } });
 
-    const query = QueryBuilder.from<TableFields>('games', 'g')
-      .leftJoin<TableFields2>('developers', 'd')
-      .on({ game_id: 'game_id' })
+    const query = queryBuilder
+      .from<TableFields>("games", "g")
+      .leftJoin(subquery, "recent_count")
+      .on({ game_id: "game_id" })
       .where({ game_id: 1 })
-      .select(subquery, 'recent_count');
+      .select(["game_id", "game_name"]);
 
     const sql = query.toString();
-    expect(sql).toBe('SELECT (SELECT * FROM games AS g WHERE g.release_year > 2020) AS recent_count FROM games AS g LEFT JOIN developers AS d ON g.game_id = d.game_id WHERE d.game_id = 1');
+    expect(sql).toBe(
+      "SELECT game_id, game_name FROM games AS g LEFT JOIN (SELECT * FROM recent_games AS rg WHERE rg.release_year > 2020) AS recent_count ON g.game_id = recent_count.game_id WHERE recent_count.game_id = 1",
+    );
   });
 
-  it('should handle subquery with complex conditions', () => {
-    const subquery = QueryBuilder.from<TableFields>('games', 'g')
-      .where({
-        release_year: { $gt: 2000 },
-        or: [
-          { game_name: { $like: '%Mario%' } }
-        ]
-      });
+  it("should handle subquery with complex conditions", () => {
+    const subquery = queryBuilder.from<TableFields>("games", "g").where({
+      release_year: { $gt: 2000 },
+      or: [{ game_name: { $like: "%Mario%" } }],
+    });
 
-    const query = QueryBuilder.from<TableFields>('summary', 's')
-      .select(subquery, 'mario_or_recent');
+    const query = queryBuilder.from(subquery, "mario_or_recent").select(["game_id", "game_name"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT (SELECT * FROM games AS g WHERE (g.release_year > 2000) OR (g.game_name LIKE '%Mario%')) AS mario_or_recent FROM summary AS s");
+    expect(sql).toBe(
+      "SELECT game_id, game_name FROM (SELECT * FROM games AS g WHERE (g.release_year > 2000) OR (g.game_name LIKE '%Mario%')) AS mario_or_recent",
+    );
   });
 
-  it('should handle subquery with joins inside subquery', () => {
-    const subquery = QueryBuilder.from<TableFields>('games', 'g')
-      .innerJoin<TableFields2>('developers', 'd')
-      .on({ game_id: 'game_id' })
+  it("should handle subquery with joins inside subquery", () => {
+    const subquery = queryBuilder
+      .from<TableFields>("games", "g")
+      .innerJoin<TableFields2>("developers", "d")
+      .on({ game_id: "game_id" })
       .where({ game_id: 1 });
 
-    const query = QueryBuilder.from<TableFields>('reports', 'r')
-      .select(subquery, 'game_with_dev');
+    const query = queryBuilder.from(subquery, "game_with_dev").select(["game_id", "game_name"]);
 
     const sql = query.toString();
-    expect(sql).toBe('SELECT (SELECT * FROM games AS g INNER JOIN developers AS d ON g.game_id = d.game_id WHERE d.game_id = 1) AS game_with_dev FROM reports AS r');
+    expect(sql).toBe(
+      "SELECT game_id, game_name FROM (SELECT * FROM games AS g INNER JOIN developers AS d ON g.game_id = d.game_id WHERE d.game_id = 1) AS game_with_dev",
+    );
   });
 
-  it('should handle multiple subqueries (though each select can only have one)', () => {
-    const subquery1 = QueryBuilder.from<TableFields>('games', 'g')
-      .where({ release_year: { $gt: 2020 } });
+  it("should handle multiple subqueries used as FROM sources", () => {
+    const subquery1 = queryBuilder.from<TableFields>("games", "g").where({ release_year: { $gt: 2020 } });
 
-    const subquery2 = QueryBuilder.from<TableFields>('games', 'g')
-      .where({ release_year: { $lt: 1990 } });
+    const subquery2 = queryBuilder
+      .from<TableFields>("games", "g")
+      .where({ release_year: { $lt: 1990 } }) as Queryable<TableFields>;
 
-    const query1 = QueryBuilder.from<TableFields>('summary', 's')
-      .select(subquery1, 'recent_games');
+    const query1 = queryBuilder.from2(subquery1);
 
-    const query2 = QueryBuilder.from<TableFields>('summary', 's')
-      .select(subquery2, 'old_games');
+    // .select(["game_id", "game_name"]);
+
+    const query2 = queryBuilder.from(subquery2, "old_games").select(["game_id", "game_name"]);
 
     const sql1 = query1.toString();
     const sql2 = query2.toString();
 
-    expect(sql1).toBe('SELECT (SELECT * FROM games AS g WHERE g.release_year > 2020) AS recent_games FROM summary AS s');
-    expect(sql2).toBe('SELECT (SELECT * FROM games AS g WHERE g.release_year < 1990) AS old_games FROM summary AS s');
+    expect(sql1).toBe(
+      "SELECT game_id, game_name FROM (SELECT * FROM games AS g WHERE g.release_year > 2020) AS recent_games",
+    );
+    expect(sql2).toBe(
+      "SELECT game_id, game_name FROM (SELECT * FROM games AS g WHERE g.release_year < 1990) AS old_games",
+    );
   });
 
-  it('should handle subquery with OR conditions using chained method', () => {
-    const subquery = QueryBuilder.from<TableFields>('games', 'g')
+  it("should handle subquery with OR conditions using chained method", () => {
+    const subquery = queryBuilder
+      .from<TableFields>("games", "g")
       .where({ release_year: { $gt: 2020 } })
-      .or({ game_name: { $like: '%Classic%' } });
+      .or({ game_name: { $like: "%Classic%" } });
 
-    const query = QueryBuilder.from<TableFields>('stats', 'st')
-      .select(subquery, 'filtered_games');
+    const query = queryBuilder.from(subquery, "filtered_games").select({
+      game_id: "id",
+      game_name: "name",
+    });
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT (SELECT * FROM games AS g WHERE (g.release_year > 2020) OR (g.game_name LIKE '%Classic%')) AS filtered_games FROM stats AS st");
+    expect(sql).toBe(
+      "SELECT game_id AS id, game_name AS name FROM (SELECT * FROM games AS g WHERE (g.release_year > 2020) OR (g.game_name LIKE '%Classic%')) AS filtered_games",
+    );
   });
 });

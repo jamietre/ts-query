@@ -3,7 +3,8 @@ import { JoinBuilder } from "./join.js";
 import { SelectBuilder } from "./select.js";
 import { WhereBuilder } from "./where.js";
 import { OrderByBuilder } from "./orderBy.js";
-import type { Query, WhereCondition } from "./types/query.js";
+import { AliasGenerator } from "./aliasGenerator.js";
+import type { Query, WhereCondition, Queryable } from "./types/query.js";
 import type { Join } from "./types/join.js";
 import type { Select } from "./types/select.js";
 import type { Where } from "./types/where.js";
@@ -20,22 +21,33 @@ export class CompoundQueryBuilder<T extends object, U extends object> implements
   }
   select(fields: Array<keyof T & U>): Select<T & U>;
   select(fields: Partial<Record<keyof T | keyof U, string>>): Select<T & U>;
-  select(subquery: Query<any>, alias?: string): Select<T & U>;
-  select(fields: Array<keyof T | keyof U> | Partial<Record<keyof T | keyof U, string>> | Query<any>, alias?: string): Select<T & U> {
-    return new SelectBuilder<T & U>(this as Query<T & U>, fields, alias);
+  select(fields: Array<keyof T | keyof U> | Partial<Record<keyof T | keyof U, string>>): Select<T & U> {
+    return new SelectBuilder<T & U>(this as Query<T & U>, fields);
   }
-  join<V extends object>(tableName: string, tableAlias?: string): Join<T & U, V> {
-    const newQuery = new QueryBuilder<V>(tableName, tableAlias);
-    return new JoinBuilder<T & U, V>(this, newQuery, 'INNER');
+  join<V extends object>(entity: string | Queryable<V>, alias?: string): Join<T & U, V> {
+    if (typeof entity === 'string') {
+      const newQuery = new QueryBuilder<V>(entity, alias || AliasGenerator.generate());
+      return new JoinBuilder<T & U, V>(this, newQuery, 'INNER');
+    } else {
+      // Handle subquery case - create a QueryBuilder that wraps the subquery
+      const newQuery = new QueryBuilder<V>(`(${entity.toString()})`, alias || AliasGenerator.generate());
+      return new JoinBuilder<T & U, V>(this, newQuery, 'INNER');
+    }
   }
 
-  innerJoin<V extends object>(tableName: string, tableAlias?: string): Join<T & U, V> {
-    return this.join<V>(tableName, tableAlias);
+  innerJoin<V extends object>(entity: string | Queryable<V>, alias?: string): Join<T & U, V> {
+    return this.join<V>(entity, alias);
   }
 
-  leftJoin<V extends object>(tableName: string, tableAlias?: string): Join<T & U, V> {
-    const newQuery = new QueryBuilder<V>(tableName, tableAlias);
-    return new JoinBuilder<T & U, V>(this, newQuery, 'LEFT');
+  leftJoin<V extends object>(entity: string | Queryable<V>, alias?: string): Join<T & U, V> {
+    if (typeof entity === 'string') {
+      const newQuery = new QueryBuilder<V>(entity, alias || AliasGenerator.generate());
+      return new JoinBuilder<T & U, V>(this, newQuery, 'LEFT');
+    } else {
+      // Handle subquery case - create a QueryBuilder that wraps the subquery
+      const newQuery = new QueryBuilder<V>(`(${entity.toString()})`, alias || AliasGenerator.generate());
+      return new JoinBuilder<T & U, V>(this, newQuery, 'LEFT');
+    }
   }
 
   where(conditions: WhereCondition<T & U>): Where<T & U> {
@@ -44,5 +56,9 @@ export class CompoundQueryBuilder<T extends object, U extends object> implements
 
   orderBy(field: keyof (T & U), direction: OrderDirection = 'ASC'): OrderBy<T & U> {
     return new OrderByBuilder<T & U>(this, field, direction);
+  }
+
+  toString(): string {
+    return this.select(['*' as any]).toString();
   }
 }

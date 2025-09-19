@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { queryBuilder, QueryBuilder } from "../src/index";
+import { queryBuilder } from "../src/index";
 import { TableFields, TableFields2 } from "./test-types";
 
 describe("LIMIT functionality", () => {
   it("should generate simple LIMIT clause", () => {
-    const query = query
+    const query = queryBuilder
       .from<TableFields>("games", "g")
       .where({ release_year: { $gt: 2000 } })
       .limit(10)
@@ -15,7 +15,8 @@ describe("LIMIT functionality", () => {
   });
 
   it("should generate LIMIT with OFFSET clause", () => {
-    const query = QueryBuilder.from<TableFields>("games", "g")
+    const query = queryBuilder
+      .from<TableFields>("games", "g")
       .where({ release_year: { $gt: 2000 } })
       .limit(10, 20)
       .select(["game_id", "game_name"]);
@@ -25,7 +26,8 @@ describe("LIMIT functionality", () => {
   });
 
   it("should generate LIMIT with chained OFFSET", () => {
-    const query = QueryBuilder.from<TableFields>("games", "g")
+    const query = queryBuilder
+      .from<TableFields>("games", "g")
       .where({ release_year: { $gt: 2000 } })
       .limit(10)
       .offset(20)
@@ -36,7 +38,8 @@ describe("LIMIT functionality", () => {
   });
 
   it("should work with complex WHERE conditions", () => {
-    const query = QueryBuilder.from<TableFields>("games", "g")
+    const query = queryBuilder
+      .from<TableFields>("games", "g")
       .where({
         release_year: { $gt: 2000 },
         or: [{ game_name: { $like: "%Mario%" } }],
@@ -51,7 +54,8 @@ describe("LIMIT functionality", () => {
   });
 
   it("should work with JOINs", () => {
-    const query = QueryBuilder.from<TableFields>("games", "g")
+    const query = queryBuilder
+      .from<TableFields>("games", "g")
       .leftJoin<TableFields2>("developers", "d")
       .on({ game_id: "game_id" })
       .where({ game_id: { $lt: 100 } })
@@ -69,7 +73,8 @@ describe("LIMIT functionality", () => {
   });
 
   it("should work with OR conditions", () => {
-    const query = QueryBuilder.from<TableFields>("games", "g")
+    const query = queryBuilder
+      .from<TableFields>("games", "g")
       .where({ release_year: { $gt: 2020 } })
       .or({ game_name: { $like: "%Classic%" } })
       .limit(3)
@@ -82,7 +87,8 @@ describe("LIMIT functionality", () => {
   });
 
   it("should work with chained WHERE conditions", () => {
-    const query = QueryBuilder.from<TableFields>("games", "g")
+    const query = queryBuilder
+      .from<TableFields>("games", "g")
       .where({ release_year: { $gt: 2000 } })
       .where({ game_name: { $like: "%Action%" } })
       .limit(8)
@@ -95,7 +101,8 @@ describe("LIMIT functionality", () => {
   });
 
   it("should work with field aliases", () => {
-    const query = QueryBuilder.from<TableFields>("games", "g")
+    const query = queryBuilder
+      .from<TableFields>("games", "g")
       .where({ release_year: { $gte: 2010 } })
       .limit(15)
       .select({
@@ -111,7 +118,8 @@ describe("LIMIT functionality", () => {
   });
 
   it("should work with mixed array field selection", () => {
-    const query = QueryBuilder.from<TableFields>("games", "g")
+    const query = queryBuilder
+      .from<TableFields>("games", "g")
       .where({ game_id: { $in: [1, 2, 3, 4, 5] } })
       .limit(3)
       .select(["game_id", { game_name: "title" }, "release_year"]);
@@ -123,7 +131,8 @@ describe("LIMIT functionality", () => {
   });
 
   it("should handle LIMIT without WHERE clause", () => {
-    const query = QueryBuilder.from<TableFields>("games", "g")
+    const query = queryBuilder
+      .from<TableFields>("games", "g")
       .where({}) // Empty where to enable limit chaining
       .limit(5)
       .select(["game_id", "game_name"]);
@@ -133,7 +142,8 @@ describe("LIMIT functionality", () => {
   });
 
   it("should work with LIMIT only (no OFFSET)", () => {
-    const query = QueryBuilder.from<TableFields>("games", "g")
+    const query = queryBuilder
+      .from<TableFields>("games", "g")
       .where({ game_name: "Tetris" })
       .limit(1)
       .select(["game_id", "game_name"]);
@@ -143,7 +153,8 @@ describe("LIMIT functionality", () => {
   });
 
   it("should override OFFSET when chained", () => {
-    const query = QueryBuilder.from<TableFields>("games", "g")
+    const query = queryBuilder
+      .from<TableFields>("games", "g")
       .where({ release_year: { $gt: 2000 } })
       .limit(10, 5) // Initial offset of 5
       .offset(15) // Override with offset of 15

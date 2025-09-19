@@ -3,20 +3,21 @@ import { Join } from "./join.js";
 import { Where, Condition } from "./where.js";
 import { OrderBy, OrderDirection } from "./orderBy.js";
 
-export interface Selectable<T extends object> {
-  select(fields: Array<keyof T | Partial<Record<keyof T, string>>>): Select<T>;
-  select(fields: Partial<Record<keyof T, string>>): Select<T>;
-  select(subquery: Query<any>, alias?: string): Select<T>;
-  select(
-    fields: Array<keyof T | Partial<Record<keyof T, string>>> | Partial<Record<keyof T, string>> | Query<any>,
-    alias?: string,
-  ): Select<T>;
+// anything that can start a query
+export interface Queryable<T extends object> {
+  toString(): string;
 }
-
-export interface Query<T extends object> extends Selectable<T> {
+export interface Query<T extends object> extends Select<T> {
+  // Join with table name - requires explicit type parameter
   join<U extends object>(tableName: string, tableAlias?: string): Join<T, U>;
   innerJoin<U extends object>(tableName: string, tableAlias?: string): Join<T, U>;
   leftJoin<U extends object>(tableName: string, tableAlias?: string): Join<T, U>;
+
+  // Join with subquery - infers type from queryable
+  join<U extends object>(subquery: Queryable<U>, alias?: string): Join<T, U>;
+  innerJoin<U extends object>(subquery: Queryable<U>, alias?: string): Join<T, U>;
+  leftJoin<U extends object>(subquery: Queryable<U>, alias?: string): Join<T, U>;
+
   where(conditions: WhereCondition<T>): Where<T>;
   orderBy(field: keyof T, direction?: OrderDirection): OrderBy<T>;
 }
@@ -24,4 +25,3 @@ export interface Query<T extends object> extends Selectable<T> {
 export type WhereCondition<T extends object> = Condition<T> & {
   or?: Array<Condition<T>>;
 };
-

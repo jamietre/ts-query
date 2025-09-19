@@ -1,8 +1,11 @@
-interface Select<T extends object> {
+type FieldAliasMapping<T extends object, R extends object> = {
+    [K in keyof T]?: keyof R;
+};
+interface Select<T extends object> extends Queryable<T> {
     select(fields: Array<keyof T | Partial<Record<keyof T, string>>>): Select<T>;
     select(fields: Partial<Record<keyof T, string>>): Select<T>;
-    select(subquery: Query<any>, alias?: string): Select<T>;
-    select(fields: Array<keyof T | Partial<Record<keyof T, string>>> | Partial<Record<keyof T, string>> | Query<any>, alias?: string): Select<T>;
+    select<R extends object>(fields: FieldAliasMapping<T, R>): Select<R>;
+    select<R extends object>(fields: Array<keyof T | FieldAliasMapping<T, R>>): Select<R>;
     toString(): string;
 }
 
@@ -44,23 +47,23 @@ type OrCondition<T extends object> = {
     type: 'or';
     conditions: Condition<T>;
 };
-interface Where<T extends object> extends Select<T> {
+interface Where<T extends object> extends Query<T> {
     where(conditions: WhereCondition<T>): Where<T>;
     or(conditions: Condition<T>): Where<T>;
     orderBy(field: keyof T, direction?: OrderDirection): OrderBy<T>;
     limit(count: number, offset?: number): any;
 }
 
-interface Selectable<T extends object> {
-    select(fields: Array<keyof T | Partial<Record<keyof T, string>>>): Select<T>;
-    select(fields: Partial<Record<keyof T, string>>): Select<T>;
-    select(subquery: Query<any>, alias?: string): Select<T>;
-    select(fields: Array<keyof T | Partial<Record<keyof T, string>>> | Partial<Record<keyof T, string>> | Query<any>, alias?: string): Select<T>;
+interface Queryable<T extends object> {
+    toString(): string;
 }
-interface Query<T extends object> extends Selectable<T> {
+interface Query<T extends object> extends Select<T> {
     join<U extends object>(tableName: string, tableAlias?: string): Join<T, U>;
     innerJoin<U extends object>(tableName: string, tableAlias?: string): Join<T, U>;
     leftJoin<U extends object>(tableName: string, tableAlias?: string): Join<T, U>;
+    join<U extends object>(subquery: Queryable<U>, alias?: string): Join<T, U>;
+    innerJoin<U extends object>(subquery: Queryable<U>, alias?: string): Join<T, U>;
+    leftJoin<U extends object>(subquery: Queryable<U>, alias?: string): Join<T, U>;
     where(conditions: WhereCondition<T>): Where<T>;
     orderBy(field: keyof T, direction?: OrderDirection): OrderBy<T>;
 }
@@ -68,23 +71,9 @@ type WhereCondition<T extends object> = Condition<T> & {
     or?: Array<Condition<T>>;
 };
 
-declare class QueryBuilder<T extends object> implements Query<T> {
-    readonly tableName: string;
-    readonly tableAlias: string;
-    constructor(tableName: string, tableAlias?: string);
-    select(fields: Array<keyof T | Partial<Record<keyof T, string>>>): Select<T>;
-    select(fields: Partial<Record<keyof T, string>>): Select<T>;
-    select(subquery: Query<any>, alias?: string): Select<T>;
-    join<U extends object>(tableName: string, tableAlias?: string): Join<T, U>;
-    innerJoin<U extends object>(tableName: string, tableAlias?: string): Join<T, U>;
-    leftJoin<U extends object>(tableName: string, tableAlias?: string): Join<T, U>;
-    where(conditions: WhereCondition<T>): Where<T>;
-    orderBy(field: keyof T, direction?: OrderDirection): OrderBy<T>;
-}
-
 declare const queryBuilder: {
-    from<T extends object>(tableName: string, tableAlias?: string): Query<T>;
+    from<T extends object>(entity: string | Queryable<T>, alias?: string): Query<T>;
 };
 
-export { QueryBuilder, queryBuilder };
+export { queryBuilder };
 export type { Condition, Join, JoinType, Limit, OrCondition, OrderBy, OrderDirection, Query, Select, Where, WhereCondition };

@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { QueryBuilder } from '../src/index';
+import { queryBuilder, Query } from '../src/index';
 import { TableFields, TableFields2, PublisherFields, ComplexJoinFields, PlatformFields } from './test-types';
 
 describe('JOIN functionality', () => {
   it('should generate INNER JOIN with join method', () => {
-    const query = QueryBuilder.from<TableFields>('games', 'g')
+    const query = queryBuilder.from<TableFields>('games', 'g')
       .join<TableFields2>('developers', 'd')
       .on({ game_id: 'game_id' })
       .select({
@@ -18,7 +18,7 @@ describe('JOIN functionality', () => {
   });
 
   it('should generate INNER JOIN with innerJoin method', () => {
-    const query = QueryBuilder.from<TableFields>('games', 'g')
+    const query = queryBuilder.from<TableFields>('games', 'g')
       .innerJoin<TableFields2>('developers', 'd')
       .on({ game_id: 'game_id' })
       .select({
@@ -32,7 +32,7 @@ describe('JOIN functionality', () => {
   });
 
   it('should generate SQL for left join with on condition', () => {
-    const query = QueryBuilder.from<TableFields>('games', 'g')
+    const query = queryBuilder.from<TableFields>('games', 'g')
       .leftJoin<TableFields2>('developers', 'd')
       .on({ game_id: 'game_id' })
       .select({
@@ -44,7 +44,7 @@ describe('JOIN functionality', () => {
   });
 
   it('should handle multiple INNER JOINs', () => {
-    const query = QueryBuilder.from<TableFields>('games', 'g')
+    const query = queryBuilder.from<TableFields>('games', 'g')
       .join<TableFields2>('developers', 'd')
       .on({ game_id: 'game_id' })
       .innerJoin<PublisherFields>('publishers', 'p')
@@ -61,7 +61,7 @@ describe('JOIN functionality', () => {
   });
 
   it('should handle mixed join types', () => {
-    const query = QueryBuilder.from<TableFields>('games', 'g')
+    const query = queryBuilder.from<TableFields>('games', 'g')
       .join<TableFields2>('developers', 'd')
       .on({ game_id: 'game_id' })
       .leftJoin<PublisherFields>('publishers', 'p')
@@ -78,7 +78,7 @@ describe('JOIN functionality', () => {
   });
 
   it('should work with INNER JOIN and WHERE clauses', () => {
-    const query = QueryBuilder.from<TableFields>('games', 'g')
+    const query = queryBuilder.from<TableFields>('games', 'g')
       .innerJoin<TableFields2>('developers', 'd')
       .on({ game_id: 'game_id' })
       .where({ game_id: 1 })
@@ -93,7 +93,7 @@ describe('JOIN functionality', () => {
   });
 
   it('should work with INNER JOIN and OR conditions', () => {
-    const query = QueryBuilder.from<TableFields>('games', 'g')
+    const query = queryBuilder.from<TableFields>('games', 'g')
       .join<TableFields2>('developers', 'd')
       .on({ game_id: 'game_id' })
       .where({ game_id: 1 })
@@ -109,12 +109,12 @@ describe('JOIN functionality', () => {
   });
 
   it('should verify that join and innerJoin produce identical results', () => {
-    const query1 = QueryBuilder.from<TableFields>('games', 'g')
+    const query1 = queryBuilder.from<TableFields>('games', 'g')
       .join<TableFields2>('developers', 'd')
       .on({ game_id: 'game_id' })
       .select(['game_id', 'game_name']);
 
-    const query2 = QueryBuilder.from<TableFields>('games', 'g')
+    const query2 = queryBuilder.from<TableFields>('games', 'g')
       .innerJoin<TableFields2>('developers', 'd')
       .on({ game_id: 'game_id' })
       .select(['game_id', 'game_name']);
@@ -127,7 +127,7 @@ describe('JOIN functionality', () => {
   });
 
   it('should handle multiple join conditions', () => {
-    const query = QueryBuilder.from<TableFields>('games', 'g')
+    const query = queryBuilder.from<TableFields>('games', 'g')
       .leftJoin<ComplexJoinFields>('game_developers', 'gd')
       .on({ game_id: 'game_id' })
       .select({
@@ -141,7 +141,7 @@ describe('JOIN functionality', () => {
   });
 
   it('should handle triple joins correctly', () => {
-    const query = QueryBuilder.from<TableFields>('games', 'g')
+    const query = queryBuilder.from<TableFields>('games', 'g')
       .leftJoin<TableFields2>('developers', 'd')
       .on({ game_id: 'game_id' })
       .leftJoin<PublisherFields>('publishers', 'p')

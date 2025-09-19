@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { QueryBuilder } from '../src/index';
+import { queryBuilder, Query } from '../src/index';
 import { TableFields, TableFields2, PublisherFields } from './test-types';
 
 describe('Automatic alias generation', () => {
   it('should auto-generate aliases for tables', () => {
-    const query = QueryBuilder.from<TableFields>('games')
+    const query = queryBuilder.from<TableFields>('games')
       .select(['game_id', 'game_name']);
 
     const sql = query.toString();
@@ -12,7 +12,7 @@ describe('Automatic alias generation', () => {
   });
 
   it('should auto-generate aliases for joins', () => {
-    const query = QueryBuilder.from<TableFields>('games')
+    const query = queryBuilder.from<TableFields>('games')
       .leftJoin<TableFields2>('developers')
       .on({ game_id: 'game_id' })
       .select({
@@ -26,18 +26,18 @@ describe('Automatic alias generation', () => {
   });
 
   it('should auto-generate aliases for subqueries', () => {
-    const subquery = QueryBuilder.from<TableFields>('games')
+    const subquery = queryBuilder.from<TableFields>('games')
       .where({ release_year: { $gt: 2000 } });
 
-    const query = QueryBuilder.from<TableFields>('summary')
-      .select(subquery as Query<any>);
+    const query = queryBuilder.from(subquery)
+      .select(['*']);
 
     const sql = query.toString();
-    expect(sql).toMatch(/SELECT \(SELECT \* FROM games AS t\d+ WHERE t\d+\.release_year > 2000\) AS s\d+ FROM summary AS t\d+/);
+    expect(sql).toMatch(/SELECT \* FROM \(SELECT \* FROM games AS t\d+ WHERE t\d+\.release_year > 2000\) AS t\d+/);
   });
 
   it('should allow mixing explicit and auto-generated aliases', () => {
-    const query = QueryBuilder.from<TableFields>('games', 'g')
+    const query = queryBuilder.from<TableFields>('games', 'g')
       .leftJoin<TableFields2>('developers')
       .on({ game_id: 'game_id' })
       .select({
@@ -50,7 +50,7 @@ describe('Automatic alias generation', () => {
   });
 
   it('should handle multiple joins with auto-generated aliases', () => {
-    const query = QueryBuilder.from<TableFields>('games')
+    const query = queryBuilder.from<TableFields>('games')
       .join<TableFields2>('developers')
       .on({ game_id: 'game_id' })
       .leftJoin<PublisherFields>('publishers')
@@ -67,24 +67,24 @@ describe('Automatic alias generation', () => {
   });
 
   it('should handle explicit aliases with auto-generated subquery alias', () => {
-    const subquery = QueryBuilder.from<TableFields>('games', 'g')
+    const subquery = queryBuilder.from<TableFields>('games', 'g')
       .where({ release_year: { $gt: 2000 } });
 
-    const query = QueryBuilder.from<TableFields>('summary', 's')
-      .select(subquery as Query<any>);
+    const query = queryBuilder.from(subquery)
+      .select(['*']);
 
     const sql = query.toString();
-    expect(sql).toMatch(/SELECT \(SELECT \* FROM games AS g WHERE g\.release_year > 2000\) AS s\d+ FROM summary AS s/);
+    expect(sql).toMatch(/SELECT \* FROM \(SELECT \* FROM games AS g WHERE g\.release_year > 2000\) AS t\d+/);
   });
 
   it('should handle auto-generated table alias with explicit subquery alias', () => {
-    const subquery = QueryBuilder.from<TableFields>('games')
+    const subquery = queryBuilder.from<TableFields>('games')
       .where({ release_year: { $gt: 2000 } });
 
-    const query = QueryBuilder.from<TableFields>('summary')
-      .select(subquery, 'recent_games');
+    const query = queryBuilder.from(subquery, 'recent_games')
+      .select(['*']);
 
     const sql = query.toString();
-    expect(sql).toMatch(/SELECT \(SELECT \* FROM games AS t\d+ WHERE t\d+\.release_year > 2000\) AS recent_games FROM summary AS t\d+/);
+    expect(sql).toMatch(/SELECT \* FROM \(SELECT \* FROM games AS t\d+ WHERE t\d+\.release_year > 2000\) AS recent_games/);
   });
 });

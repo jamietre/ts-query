@@ -1,17 +1,17 @@
 import { describe, it, expect } from 'vitest';
-import { QueryBuilder } from '../src/index';
+import { queryBuilder, Query } from '../src/index';
 import { TableFields, TableFields2, PublisherFields } from './test-types';
 
 describe('Basic Query Functionality', () => {
   it('should create a basic query with from method', () => {
-    const query = QueryBuilder.from<TableFields>('games', 'g');
+    const query = queryBuilder.from<TableFields>('games', 'g');
 
     expect(query.tableName).toBe('games');
     expect(query.tableAlias).toBe('g');
   });
 
   it('should generate SQL for simple select with array of fields', () => {
-    const query = QueryBuilder.from<TableFields>('games', 'g')
+    const query = queryBuilder.from<TableFields>('games', 'g')
       .select(['game_id', 'game_name']);
 
     const sql = query.toString();
@@ -19,7 +19,7 @@ describe('Basic Query Functionality', () => {
   });
 
   it('should generate SQL for simple select with field mapping', () => {
-    const query = QueryBuilder.from<TableFields>('games', 'g')
+    const query = queryBuilder.from<TableFields>('games', 'g')
       .select({
         game_id: 'id',
         game_name: 'name'
@@ -30,7 +30,7 @@ describe('Basic Query Functionality', () => {
   });
 
   it('should handle select with same field name and alias', () => {
-    const query = QueryBuilder.from<TableFields>('games', 'g')
+    const query = queryBuilder.from<TableFields>('games', 'g')
       .select({
         game_id: 'game_id', // Same name as alias
         game_name: 'title'   // Different alias
@@ -41,7 +41,7 @@ describe('Basic Query Functionality', () => {
   });
 
   it('should handle mixed array with strings and objects', () => {
-    const query = QueryBuilder.from<TableFields>('games', 'g')
+    const query = queryBuilder.from<TableFields>('games', 'g')
       .select([
         'game_id',               // string field name
         { game_name: 'title' },  // object with alias
@@ -53,7 +53,7 @@ describe('Basic Query Functionality', () => {
   });
 
   it('should handle array with only objects', () => {
-    const query = QueryBuilder.from<TableFields>('games', 'g')
+    const query = queryBuilder.from<TableFields>('games', 'g')
       .select([
         { game_id: 'id' },
         { game_name: 'name' },
@@ -65,7 +65,7 @@ describe('Basic Query Functionality', () => {
   });
 
   it('should handle mixed array with multiple fields in objects', () => {
-    const query = QueryBuilder.from<TableFields>('games', 'g')
+    const query = queryBuilder.from<TableFields>('games', 'g')
       .select([
         'game_id',
         { game_name: 'title', release_year: 'year' }
@@ -76,7 +76,7 @@ describe('Basic Query Functionality', () => {
   });
 
   it('should handle multiple joins in sequence', () => {
-    const query = QueryBuilder.from<TableFields>('games', 'g')
+    const query = queryBuilder.from<TableFields>('games', 'g')
       .leftJoin<TableFields2>('developers', 'd')
       .on({ game_id: 'game_id' })
       .leftJoin<PublisherFields>('publishers', 'p')
@@ -93,7 +93,7 @@ describe('Basic Query Functionality', () => {
   });
 
   it('should match the example usage from the prompt', () => {
-    const query = QueryBuilder.from<TableFields>("games", "g")
+    const query = queryBuilder.from<TableFields>("games", "g")
       .leftJoin<TableFields2>("developers", "d")
       .on({ game_id: "game_id" })
       .select({

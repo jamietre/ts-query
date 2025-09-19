@@ -3,7 +3,6 @@ import { QueryBuilder } from "./query.js";
 import { WhereBuilder } from "./where.js";
 import { LimitBuilder } from "./limit.js";
 import { OrderByBuilder } from "./orderBy.js";
-import { SubqueryAliasGenerator } from "./aliasGenerator.js";
 import type { Query } from "./types/query.js";
 import type { Limit } from "./types/limit.js";
 import type { OrderBy } from "./types/orderBy.js";
@@ -11,18 +10,9 @@ import type { Select } from "./types/select.js";
 export class SelectBuilder<T extends object> implements Select<T> {
   query: Query<T> | Limit<T> | OrderBy<T>;
   fields: Partial<Record<keyof T, string>> = {};
-  subquery?: Query<any>;
-  subqueryAlias?: string;
 
-  constructor(query: Query<T> | Limit<T> | OrderBy<T>, fields: any, alias?: string) {
+  constructor(query: Query<T> | Limit<T> | OrderBy<T>, fields: any) {
     this.query = query;
-
-    // Check if fields is actually a Query (subquery)
-    if (fields && typeof fields === "object" && "select" in fields && typeof fields.select === "function") {
-      this.subquery = fields as Query<any>;
-      this.subqueryAlias = alias || SubqueryAliasGenerator.generate();
-      return;
-    }
 
     if (Array.isArray(fields)) {
       fields.forEach((field: keyof T | Partial<Record<keyof T, string>>) => {
@@ -44,17 +34,13 @@ export class SelectBuilder<T extends object> implements Select<T> {
         this.fields[key as keyof T] = value as string;
       });
     }
-    return;
   }
   select(fields: (keyof T | Partial<Record<keyof T, string>>)[]): Select<T>;
   select(fields: Partial<Record<keyof T, string>>): Select<T>;
-  select(subquery: Query<any>, alias?: string): Select<T>;
   select(
-    fields: Partial<Record<keyof T, string>> | Query<any> | (keyof T | Partial<Record<keyof T, string>>)[],
-    alias?: string,
-  ): Select<T>;
-  select(fields: unknown, alias?: unknown): Select<T> {
-    throw new Error("Method not implemented.");
+    fields: Partial<Record<keyof T, string>> | (keyof T | Partial<Record<keyof T, string>>)[],
+  ): Select<T> {
+    return new SelectBuilder<T>(this.query, fields);
   }
 
   private getSource(query: Query<any> | Limit<any> | OrderBy<any>): string {
@@ -270,27 +256,6 @@ export class SelectBuilder<T extends object> implements Select<T> {
   }
 
   toString() {
-    // Handle subquery case
-    if (this.subquery && this.subqueryAlias) {
-      const subquerySQL = this.generateSubquerySQL(this.subquery);
-      const source = this.getSource(this.query);
-      const whereClause = this.getWhereClause(this.query);
-      const orderByClause = this.getOrderByClause(this.query);
-      const limitClause = this.getLimitClause(this.query);
-
-      let sql = `SELECT (${subquerySQL}) AS ${this.subqueryAlias} FROM ${source}`;
-      if (whereClause) {
-        sql += ` WHERE ${whereClause}`;
-      }
-      if (orderByClause) {
-        sql += ` ${orderByClause}`;
-      }
-      if (limitClause) {
-        sql += ` ${limitClause}`;
-      }
-      return sql;
-    }
-
     // Handle regular field selection
     const fields = Object.entries(this.fields)
       .map(([column, alias]) => {

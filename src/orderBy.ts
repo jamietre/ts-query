@@ -28,10 +28,14 @@ export class OrderByBuilder<T extends object> implements OrderBy<T> {
     fields: Array<keyof T | Partial<Record<keyof T, string>>> | Partial<Record<keyof T, string>> | Query<any>,
     alias?: string,
   ): Select<T> {
-    return new SelectBuilder<T>(this, fields, alias);
+    return new SelectBuilder<T>(this, fields);
   }
 
   limit(count: number, offset?: number): Limit<T> {
     return new LimitBuilder<T>(this.query, count, offset);
+  }
+
+  toString(): string {
+    return this.select(['*' as any]).toString();
   }
 }
