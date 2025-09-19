@@ -1,34 +1,39 @@
-import { CompoundQuery } from "./compoundQuery.js";
-import { BaseQuery, Query } from "./query.js";
-import { Where } from "./where.js";
+import { CompoundQueryBuilder } from "./compoundQuery.js";
+import { QueryBuilder } from "./query.js";
+import { WhereBuilder } from "./where.js";
+import { LimitBuilder } from "./limit.js";
+import { SubqueryAliasGenerator } from "./aliasGenerator.js";
+import type { Query } from "./types/query.js";
+import type { Limit } from "./types/limit.js";
+import type { Where } from "./types/where.js";
 
-// Access the AliasGenerator from query.ts
-const AliasGenerator = {
-  counter: 0,
-  generate(): string {
-    return `s${++this.counter}`;
-  }
-};
-
-export class Select<T extends object> {
-  query: Query<T>;
+export class SelectBuilder<T extends object> {
+  query: Query<T> | Limit<T>;
   fields: Partial<Record<keyof T, string>> = {};
   subquery?: Query<any>;
   subqueryAlias?: string;
 
-  constructor(query: Query<T>, fields: any, alias?: string) {
+  constructor(query: Query<T> | Limit<T>, fields: any, alias?: string) {
     this.query = query;
 
     // Check if fields is actually a Query (subquery)
     if (fields && typeof fields === 'object' && 'select' in fields && typeof fields.select === 'function') {
       this.subquery = fields as Query<any>;
-      this.subqueryAlias = alias || AliasGenerator.generate();
+      this.subqueryAlias = alias || SubqueryAliasGenerator.generate();
       return;
     }
 
     if (Array.isArray(fields)) {
-      fields.forEach((field: keyof T) => {
-        this.fields[field] = field as string;
+      fields.forEach((field: keyof T | Partial<Record<keyof T, string>>) => {
+        if (typeof field === 'string' || typeof field === 'symbol' || typeof field === 'number') {
+          // Handle string field names
+          this.fields[field as keyof T] = field as string;
+        } else if (typeof field === 'object' && field !== null) {
+          // Handle object with field mappings
+          Object.entries(field).forEach(([key, value]) => {
+            this.fields[key as keyof T] = value as string;
+          });
+        }
       });
       return;
     }
@@ -41,10 +46,10 @@ export class Select<T extends object> {
     return;
   }
 
-  private getSource(query: Query<any>): string {
-    if (query instanceof BaseQuery) {
+  private getSource(query: Query<any> | Limit<any>): string {
+    if (query instanceof QueryBuilder) {
       return `${query.tableName} AS ${query.tableAlias}`;
-    } else if (query instanceof CompoundQuery) {
+    } else if (query instanceof CompoundQueryBuilder) {
       const left = this.getSource(query.query1);
       const right = this.getSource(query.query2);
       const on = Object.entries(query.joinInfo.condition || {})
@@ -57,19 +62,23 @@ export class Select<T extends object> {
         .join(" AND ");
       const joinType = query.joinInfo.joinType;
       return `${left} ${joinType} JOIN ${right} ON ${on}`;
-    } else if (query instanceof Where) {
+    } else if (query instanceof WhereBuilder) {
+      return this.getSource(query.query);
+    } else if (query instanceof LimitBuilder) {
       return this.getSource(query.query);
     }
     return "";
   }
 
-  private getRightmostTableAlias(query: Query<any>): string {
-    if (query instanceof BaseQuery) {
+  private getRightmostTableAlias(query: Query<any> | Limit<any>): string {
+    if (query instanceof QueryBuilder) {
       return query.tableAlias;
-    } else if (query instanceof CompoundQuery) {
+    } else if (query instanceof CompoundQueryBuilder) {
       // For compound queries, get the rightmost table alias (the most recently joined table)
       return this.getRightmostTableAlias(query.query2);
-    } else if (query instanceof Where) {
+    } else if (query instanceof WhereBuilder) {
+      return this.getRightmostTableAlias(query.query);
+    } else if (query instanceof LimitBuilder) {
       return this.getRightmostTableAlias(query.query);
     }
     return "";
@@ -97,8 +106,8 @@ export class Select<T extends object> {
     return `${tableAlias}.${key} = ${this.formatValue(value)}`;
   }
 
-  private getWhereClause(query: Query<any>): string {
-    if (query instanceof Where) {
+  private getWhereClause(query: Query<any> | Limit<any>): string {
+    if (query instanceof WhereBuilder) {
       // Extract the inline "or" conditions from the main conditions
       const { or: inlineOrConditions, ...mainConditions } = query.conditions;
 
@@ -142,14 +151,27 @@ export class Select<T extends object> {
 
       const nestedWhere = this.getWhereClause(query.query);
       return nestedWhere ? `${allConditions} AND ${nestedWhere}` : allConditions;
+    } else if (query instanceof LimitBuilder) {
+      return this.getWhereClause(query.query);
     }
     return '';
   }
 
-  private getTableAliasForField(query: Query<any>, _field: string): string {
+  private getTableAliasForField(query: Query<any> | Limit<any>, _field: string): string {
     // For now, just get the rightmost alias - in a more sophisticated implementation,
     // you might want to track which table each field belongs to
     return this.getRightmostTableAlias(query);
+  }
+
+  private getLimitClause(query: Query<any> | Limit<any>): string {
+    if (query instanceof LimitBuilder) {
+      let limitClause = `LIMIT ${query.limitValue}`;
+      if (query.offsetValue !== undefined) {
+        limitClause += ` OFFSET ${query.offsetValue}`;
+      }
+      return limitClause;
+    }
+    return '';
   }
 
   private formatValue(value: any): string {
@@ -159,19 +181,31 @@ export class Select<T extends object> {
     return String(value);
   }
 
-  private generateSubquerySQL(query: Query<any>): string {
+  private generateSubquerySQL(query: Query<any> | Limit<any>): string {
     // Generate a basic SELECT * from the subquery to get its full SQL
-    if (query instanceof BaseQuery) {
+    if (query instanceof QueryBuilder) {
       return `SELECT * FROM ${query.tableName} AS ${query.tableAlias}`;
-    } else if (query instanceof CompoundQuery) {
+    } else if (query instanceof CompoundQueryBuilder) {
       const source = this.getSource(query);
       return `SELECT * FROM ${source}`;
-    } else if (query instanceof Where) {
+    } else if (query instanceof WhereBuilder) {
       const source = this.getSource(query.query);
       const whereClause = this.getWhereClause(query);
       let sql = `SELECT * FROM ${source}`;
       if (whereClause) {
         sql += ` WHERE ${whereClause}`;
+      }
+      return sql;
+    } else if (query instanceof LimitBuilder) {
+      const source = this.getSource(query.query);
+      const whereClause = this.getWhereClause(query.query);
+      const limitClause = this.getLimitClause(query);
+      let sql = `SELECT * FROM ${source}`;
+      if (whereClause) {
+        sql += ` WHERE ${whereClause}`;
+      }
+      if (limitClause) {
+        sql += ` ${limitClause}`;
       }
       return sql;
     }
@@ -184,10 +218,14 @@ export class Select<T extends object> {
       const subquerySQL = this.generateSubquerySQL(this.subquery);
       const source = this.getSource(this.query);
       const whereClause = this.getWhereClause(this.query);
+      const limitClause = this.getLimitClause(this.query);
 
       let sql = `SELECT (${subquerySQL}) AS ${this.subqueryAlias} FROM ${source}`;
       if (whereClause) {
         sql += ` WHERE ${whereClause}`;
+      }
+      if (limitClause) {
+        sql += ` ${limitClause}`;
       }
       return sql;
     }
@@ -203,10 +241,14 @@ export class Select<T extends object> {
       .join(", ");
     const source = this.getSource(this.query);
     const whereClause = this.getWhereClause(this.query);
+    const limitClause = this.getLimitClause(this.query);
 
     let sql = `SELECT ${fields} FROM ${source}`;
     if (whereClause) {
       sql += ` WHERE ${whereClause}`;
+    }
+    if (limitClause) {
+      sql += ` ${limitClause}`;
     }
     return sql;
   }

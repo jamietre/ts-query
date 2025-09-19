@@ -1,6 +1,6 @@
 {
   "name": "ts-query",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Type-safe SQL query builder with fluent API for TypeScript",
   "keywords": [
     "typescript",
@@ -11,13 +11,14 @@
     "orm"
   ],
   "type": "module",
-  "main": "./dist/esm/index.js",
-  "types": "./dist/types/index.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.cjs",
-      "types": "./dist/types/index.d.ts"
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
     }
   },
   "files": [
@@ -27,14 +28,15 @@
   ],
   "packageManager": "pnpm@10.16.1",
   "scripts": {
-    "build": "pnpm run clean && pnpm run build:esm && pnpm run build:cjs && pnpm run build:types",
-    "build:esm": "swc src -d dist/esm --strip-leading-paths --ignore '**/*.test.ts'",
-    "build:cjs": "swc src -d dist/cjs --strip-leading-paths --ignore '**/*.test.ts' -C module.type=commonjs --out-file-extension cjs && pnpm run build:cjs-package && node scripts/fix-cjs-imports.js",
+    "build": "pnpm run clean && rollup -c",
+    "build:legacy": "pnpm run clean && pnpm run build:esm && pnpm run build:cjs && pnpm run build:types",
+    "build:esm": "swc src -d dist/esm --strip-leading-paths --ignore '**/*.test.ts' --source-maps",
+    "build:cjs": "swc src -d dist/cjs --strip-leading-paths --ignore '**/*.test.ts' -C module.type=commonjs --out-file-extension cjs --source-maps && pnpm run build:cjs-package && node scripts/fix-cjs-imports.js",
     "build:cjs-package": "echo '{\"type\":\"commonjs\"}' > dist/cjs/package.json",
     "build:types": "tsc --emitDeclarationOnly --outDir dist/types",
     "clean": "rm -rf dist",
     "dev": "nodemon",
-    "start": "node dist/esm/index.js",
+    "start": "node dist/index.js",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
@@ -55,13 +57,19 @@
     "exec": "sleep 1 && tsc --project tsconfig-scripts.json &&  node --inspect --stack-trace-limit=1000 -r ts-node/register ./src/index.ts"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.6",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-typescript": "^12.1.4",
     "@swc/cli": "^0.7.8",
     "@swc/core": "^1.13.5",
     "@types/node": "^20.12.12",
     "@types/ws": "^8.5.10",
     "nodemon": "^3.1.10",
     "prettier": "^3.6.2",
+    "rollup": "^4.51.0",
+    "rollup-plugin-dts": "^6.2.3",
     "ts-node": "^10.9.2",
+    "tslib": "^2.8.1",
     "typescript": "^5.4.5",
     "vitest": "^3.2.4"
   },

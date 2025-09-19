@@ -1,9 +1,9 @@
-import { CompoundQuery } from "./compoundQuery.js";
-import { Query } from "./query.js";
+import { CompoundQueryBuilder } from "./compoundQuery.js";
+import type { Query } from "./types/query.js";
 
 export type JoinType = 'INNER' | 'LEFT';
 
-export class Join<T extends object, U extends object> {
+export class JoinBuilder<T extends object, U extends object> {
   readonly query1: Query<T>;
   readonly query2: Query<U>;
   readonly joinType: JoinType;
@@ -17,6 +17,6 @@ export class Join<T extends object, U extends object> {
 
   on(condition: Partial<Record<keyof T, keyof U>>): Query<T & U> {
     this.condition = condition;
-    return new CompoundQuery<T, U>(this.query1, this.query2, this);
+    return new CompoundQueryBuilder<T, U>(this.query1, this.query2, this);
   }
 }

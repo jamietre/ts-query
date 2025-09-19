@@ -1,6 +1,12 @@
-import { Query } from "./query.js";
-import { Select } from "./select.js";
-import { Join } from "./join.js";
+import { QueryBuilder } from "./query.js";
+import { SelectBuilder } from "./select.js";
+import { JoinBuilder } from "./join.js";
+import { LimitBuilder } from "./limit.js";
+import type { Query } from "./types/query.js";
+import type { Select } from "./types/select.js";
+import type { Join } from "./types/join.js";
+import type { Limit } from "./types/limit.js";
+import type { Where } from "./types/where.js";
 
 type Condition<T extends object> = {
   [K in keyof T]?: T[K] | { $eq: T[K] } | { $gt: T[K] } | { $lt: T[K] } | { $gte: T[K] } | { $lte: T[K] } | { $ne: T[K] } | { $in: T[K][] } | { $like: string };
@@ -15,7 +21,7 @@ export type OrCondition<T extends object> = {
   conditions: Condition<T>;
 };
 
-export class Where<T extends object> implements Query<T> {
+export class WhereBuilder<T extends object> implements Query<T> {
   readonly query: Query<T>;
   readonly conditions: WhereCondition<T>;
   readonly orConditions: OrCondition<T>[] = [];
@@ -26,16 +32,16 @@ export class Where<T extends object> implements Query<T> {
     this.orConditions = orConditions;
   }
 
-  select(fields: Array<keyof T>): Select<T>;
+  select(fields: Array<keyof T | Partial<Record<keyof T, string>>>): Select<T>;
   select(fields: Partial<Record<keyof T, string>>): Select<T>;
   select(subquery: Query<any>, alias?: string): Select<T>;
-  select(fields: Array<keyof T> | Partial<Record<keyof T, string>> | Query<any>, alias?: string): Select<T> {
-    return new Select<T>(this, fields, alias);
+  select(fields: Array<keyof T | Partial<Record<keyof T, string>>> | Partial<Record<keyof T, string>> | Query<any>, alias?: string): Select<T> {
+    return new SelectBuilder<T>(this, fields, alias);
   }
 
   join<U extends object>(tableName: string, tableAlias?: string): Join<T, U> {
-    const newQuery = new BaseQuery<U>(tableName, tableAlias);
-    return new Join<T, U>(this, newQuery, 'INNER');
+    const newQuery = new QueryBuilder<U>(tableName, tableAlias);
+    return new JoinBuilder<T, U>(this, newQuery, 'INNER');
   }
 
   innerJoin<U extends object>(tableName: string, tableAlias?: string): Join<T, U> {
@@ -43,14 +49,14 @@ export class Where<T extends object> implements Query<T> {
   }
 
   leftJoin<U extends object>(tableName: string, tableAlias?: string): Join<T, U> {
-    const newQuery = new BaseQuery<U>(tableName, tableAlias);
-    return new Join<T, U>(this, newQuery, 'LEFT');
+    const newQuery = new QueryBuilder<U>(tableName, tableAlias);
+    return new JoinBuilder<T, U>(this, newQuery, 'LEFT');
   }
 
   where(conditions: WhereCondition<T>): Where<T> {
     // Merge conditions (simple approach - in real implementation might want more sophisticated merging)
     const mergedConditions = { ...this.conditions, ...conditions };
-    return new Where<T>(this.query, mergedConditions, this.orConditions);
+    return new WhereBuilder<T>(this.query, mergedConditions, this.orConditions);
   }
 
   or(conditions: Condition<T>): Where<T> {
@@ -59,9 +65,13 @@ export class Where<T extends object> implements Query<T> {
       conditions
     };
     const newOrConditions = [...this.orConditions, orCondition];
-    return new Where<T>(this.query, this.conditions, newOrConditions);
+    return new WhereBuilder<T>(this.query, this.conditions, newOrConditions);
+  }
+
+  limit(count: number, offset?: number): Limit<T> {
+    return new LimitBuilder<T>(this, count, offset);
   }
 }
 
-// Need to import BaseQuery here to avoid circular dependency
-import { BaseQuery } from "./query.js";
+// Need to import QueryBuilder here to avoid circular dependency
+import { AliasGenerator } from "./aliasGenerator.js";
