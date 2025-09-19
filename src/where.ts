@@ -10,7 +10,7 @@ import type { Limit } from "./types/limit.js";
 import type { Where, Condition, OrCondition } from "./types/where.js";
 import type { OrderBy, OrderDirection } from "./types/orderBy.js";
 
-export class WhereBuilder<T extends object> implements Query<T> {
+export class WhereBuilder<T extends object> implements Where<T> {
   readonly query: Query<T>;
   readonly conditions: WhereCondition<T>;
   readonly orConditions: OrCondition<T>[] = [];

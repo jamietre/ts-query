@@ -33,7 +33,7 @@
     "build:esm": "swc src -d dist/esm --strip-leading-paths --ignore '**/*.test.ts' --source-maps",
     "build:cjs": "swc src -d dist/cjs --strip-leading-paths --ignore '**/*.test.ts' -C module.type=commonjs --out-file-extension cjs --source-maps && pnpm run build:cjs-package && node scripts/fix-cjs-imports.js",
     "build:cjs-package": "echo '{\"type\":\"commonjs\"}' > dist/cjs/package.json",
-    "build:types": "tsc --emitDeclarationOnly --outDir dist/types",
+    "build:types": "tsc --project tsconfig.build.json --emitDeclarationOnly --outDir dist/types",
     "clean": "rm -rf dist",
     "dev": "nodemon",
     "start": "node dist/index.js",
@@ -70,7 +70,7 @@
     "rollup-plugin-dts": "^6.2.3",
     "ts-node": "^10.9.2",
     "tslib": "^2.8.1",
-    "typescript": "^5.4.5",
+    "typescript": "5.4.5",
     "vitest": "^3.2.4"
   },
   "author": "",

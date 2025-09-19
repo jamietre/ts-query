@@ -4,7 +4,7 @@
         "lib": ["es2020"],
         "module": "nodenext",
         "outDir": "./dist",
-        "rootDir": "./src",
+        "rootDir": "./",
         "strict": true,
         "esModuleInterop": true,
         "allowSyntheticDefaultImports": true,
@@ -19,6 +19,6 @@
         "verbatimModuleSyntax": false,
         "typeRoots": ["node_modules/@types", "types"]
     },
-    "include": ["src/**/*.ts"],
-    "exclude": ["node_modules", "dist", "**/*.test.ts"]
+    "include": ["src/**/*.ts", "test/**/*.ts"],
+    "exclude": ["node_modules", "dist"]
 }

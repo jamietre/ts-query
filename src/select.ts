@@ -3,15 +3,15 @@ import { QueryBuilder } from "./query.js";
 import { WhereBuilder } from "./where.js";
 import { LimitBuilder } from "./limit.js";
 import { OrderByBuilder } from "./orderBy.js";
-import type { Query } from "./types/query.js";
+import type { Query, Queryable } from "./types/query.js";
 import type { Limit } from "./types/limit.js";
 import type { OrderBy } from "./types/orderBy.js";
 import type { Select } from "./types/select.js";
 export class SelectBuilder<T extends object> implements Select<T> {
-  query: Query<T> | Limit<T> | OrderBy<T>;
+  query: Queryable<T>;
   fields: Partial<Record<keyof T, string>> = {};
 
-  constructor(query: Query<T> | Limit<T> | OrderBy<T>, fields: any) {
+  constructor(query: Queryable<T>, fields: any) {
     this.query = query;
 
     if (Array.isArray(fields)) {
@@ -37,13 +37,11 @@ export class SelectBuilder<T extends object> implements Select<T> {
   }
   select(fields: (keyof T | Partial<Record<keyof T, string>>)[]): Select<T>;
   select(fields: Partial<Record<keyof T, string>>): Select<T>;
-  select(
-    fields: Partial<Record<keyof T, string>> | (keyof T | Partial<Record<keyof T, string>>)[],
-  ): Select<T> {
+  select(fields: Partial<Record<keyof T, string>> | (keyof T | Partial<Record<keyof T, string>>)[]): Select<T> {
     return new SelectBuilder<T>(this.query, fields);
   }
 
-  private getSource(query: Query<any> | Limit<any> | OrderBy<any>): string {
+  private getSource(query: Queryable<any>): string {
     if (query instanceof QueryBuilder) {
       return `${query.tableName} AS ${query.tableAlias}`;
     } else if (query instanceof CompoundQueryBuilder) {
@@ -69,7 +67,7 @@ export class SelectBuilder<T extends object> implements Select<T> {
     return "";
   }
 
-  private getRightmostTableAlias(query: Query<any> | Limit<any> | OrderBy<any>): string {
+  private getRightmostTableAlias(query: Queryable<any>): string {
     if (query instanceof QueryBuilder) {
       return query.tableAlias;
     } else if (query instanceof CompoundQueryBuilder) {
@@ -116,7 +114,7 @@ export class SelectBuilder<T extends object> implements Select<T> {
     return `${tableAlias}.${key} = ${this.formatValue(value)}`;
   }
 
-  private getWhereClause(query: Query<any> | Limit<any> | OrderBy<any>): string {
+  private getWhereClause(query: Queryable<T>): string {
     if (query instanceof WhereBuilder) {
       // Extract the inline "or" conditions from the main conditions
       const { or: inlineOrConditions, ...mainConditions } = query.conditions;
@@ -171,13 +169,13 @@ export class SelectBuilder<T extends object> implements Select<T> {
     return "";
   }
 
-  private getTableAliasForField(query: Query<any> | Limit<any> | OrderBy<any>, _field: string): string {
+  private getTableAliasForField(query: Queryable<any>, _field: string): string {
     // For now, just get the rightmost alias - in a more sophisticated implementation,
     // you might want to track which table each field belongs to
     return this.getRightmostTableAlias(query);
   }
 
-  private getLimitClause(query: Query<any> | Limit<any> | OrderBy<any>): string {
+  private getLimitClause(query: Queryable<any>): string {
     if (query instanceof LimitBuilder) {
       let limitClause = `LIMIT ${query.limitValue}`;
       if (query.offsetValue !== undefined) {
@@ -190,12 +188,14 @@ export class SelectBuilder<T extends object> implements Select<T> {
     return "";
   }
 
-  private getOrderByClause(query: Query<any> | Limit<any> | OrderBy<any>): string {
+  private getOrderByClause(query: Queryable<any>): string {
     if (query instanceof OrderByBuilder) {
-      const orderFields = query.orderFields.map(({ field, direction }) => {
-        const tableAlias = this.getRightmostTableAlias(query.query);
-        return `${tableAlias}.${String(field)} ${direction}`;
-      }).join(', ');
+      const orderFields = query.orderFields
+        .map(({ field, direction }) => {
+          const tableAlias = this.getRightmostTableAlias(query.query);
+          return `${tableAlias}.${String(field)} ${direction}`;
+        })
+        .join(", ");
       return `ORDER BY ${orderFields}`;
     }
     return "";
@@ -208,7 +208,7 @@ export class SelectBuilder<T extends object> implements Select<T> {
     return String(value);
   }
 
-  private generateSubquerySQL(query: Query<any> | Limit<any> | OrderBy<any>): string {
+  private generateSubquerySQL(query: Queryable<any>): string {
     // Generate a basic SELECT * from the subquery to get its full SQL
     if (query instanceof QueryBuilder) {
       return `SELECT * FROM ${query.tableName} AS ${query.tableAlias}`;

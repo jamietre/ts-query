@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { queryBuilder } from "../src/index";
-import { TableFields, TableFields2 } from "./test-types";
+import { queryBuilder } from "../src/index.js";
+import { TableFields, TableFields2 } from "./test-types.js";
 
 describe("LIMIT functionality", () => {
   it("should generate simple LIMIT clause", () => {

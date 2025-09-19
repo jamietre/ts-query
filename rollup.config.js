@@ -19,7 +19,7 @@ export default [
       resolve(),
       commonjs(),
       typescript({
-        tsconfig: './tsconfig.json',
+        tsconfig: './tsconfig.build.json',
         declaration: false,
         declarationMap: false,
       }),
@@ -39,7 +39,7 @@ export default [
       resolve(),
       commonjs(),
       typescript({
-        tsconfig: './tsconfig.json',
+        tsconfig: './tsconfig.build.json',
         declaration: false,
         declarationMap: false,
       }),
@@ -55,7 +55,7 @@ export default [
     external,
     plugins: [
       dts({
-        tsconfig: './tsconfig.json',
+        tsconfig: './tsconfig.build.json',
       }),
     ],
   },

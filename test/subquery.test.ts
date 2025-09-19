@@ -1,11 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { queryBuilder } from "../src/index";
-import { TableFields, TableFields2 } from "./test-types";
-import { Queryable } from "../src/types/query";
+import { queryBuilder } from "../src/index.js";
+import { TableFields, TableFields2 } from "./test-types.js";
 
 describe("Subquery functionality", () => {
   it("should handle simple subquery with alias", () => {
     const subquery = queryBuilder.from<TableFields>("games", "g").where({ release_year: { $gt: 2000 } });
+    const query2 = queryBuilder.from(subquery, "recent_games_count");
 
     const query = queryBuilder
       .from(subquery, "recent_games_count")
@@ -68,10 +68,11 @@ describe("Subquery functionality", () => {
 
     const subquery2 = queryBuilder
       .from<TableFields>("games", "g")
-      .where({ release_year: { $lt: 1990 } }) as Queryable<TableFields>;
+      .where({ release_year: { $lt: 1990 } })
+      .orderBy("release_year", "DESC")
+      .limit(10);
 
-    const query1 = queryBuilder.from2(subquery1);
-
+    const query1 = queryBuilder.from(subquery1);
     // .select(["game_id", "game_name"]);
 
     const query2 = queryBuilder.from(subquery2, "old_games").select(["game_id", "game_name"]);

@@ -20,13 +20,11 @@ export class LimitBuilder<T extends object> implements Select<T> {
 
   select(fields: Array<keyof T | Partial<Record<keyof T, string>>>): Select<T>;
   select(fields: Partial<Record<keyof T, string>>): Select<T>;
-  select(
-    fields: Array<keyof T | Partial<Record<keyof T, string>>> | Partial<Record<keyof T, string>>,
-  ): Select<T> {
+  select(fields: Array<keyof T | Partial<Record<keyof T, string>>> | Partial<Record<keyof T, string>>): Select<T> {
     return new SelectBuilder<T>(this, fields);
   }
 
   toString(): string {
-    return this.select(['*' as any]).toString();
+    return this.select(["*" as any]).toString();
   }
 }
