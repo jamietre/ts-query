@@ -7,7 +7,7 @@ describe("WHERE functionality", () => {
     const query = queryBuilder.from<TableFields>("games", "g").where({ game_id: 1 }).select(["game_id", "game_name"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT game_id, game_name FROM games AS g WHERE g.game_id = 1");
+    expect(sql).toBe("SELECT game_id, game_name FROM games WHERE g.game_id = 1");
   });
 
   it("should generate where clause with string value", () => {
@@ -17,7 +17,7 @@ describe("WHERE functionality", () => {
       .select(["game_id", "game_name"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT game_id, game_name FROM games AS g WHERE g.game_name = 'Tetris'");
+    expect(sql).toBe("SELECT game_id, game_name FROM games WHERE g.game_name = 'Tetris'");
   });
 
   it("should generate where clause with multiple conditions", () => {
@@ -27,7 +27,7 @@ describe("WHERE functionality", () => {
       .select(["game_id", "game_name"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT game_id, game_name FROM games AS g WHERE g.game_id = 1 AND g.release_year = 2020");
+    expect(sql).toBe("SELECT game_id, game_name FROM games WHERE g.game_id = 1 AND g.release_year = 2020");
   });
 
   it("should generate where clause with comparison operators", () => {
@@ -37,7 +37,7 @@ describe("WHERE functionality", () => {
       .select(["game_id", "game_name"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT game_id, game_name FROM games AS g WHERE g.release_year > 2000");
+    expect(sql).toBe("SELECT game_id, game_name FROM games WHERE g.release_year > 2000");
   });
 
   it("should generate where clause with IN operator", () => {
@@ -47,7 +47,7 @@ describe("WHERE functionality", () => {
       .select(["game_id", "game_name"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT game_id, game_name FROM games AS g WHERE g.release_year IN (2019, 2020, 2021)");
+    expect(sql).toBe("SELECT game_id, game_name FROM games WHERE g.release_year IN (2019, 2020, 2021)");
   });
 
   it("should work with joins and where clauses", () => {
@@ -77,7 +77,7 @@ describe("WHERE functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT game_id, game_name FROM games AS g WHERE g.release_year > 2000 AND g.game_name = 'Tetris'",
+      "SELECT game_id, game_name FROM games WHERE g.release_year > 2000 AND g.game_name = 'Tetris'",
     );
   });
 
@@ -86,25 +86,25 @@ describe("WHERE functionality", () => {
       .from<TableFields>("games", "g")
       .where({ release_year: { $lt: 2000 } })
       .select(["game_name"]);
-    expect(query1.toString()).toBe("SELECT game_name FROM games AS g WHERE g.release_year < 2000");
+    expect(query1.toString()).toBe("SELECT game_name FROM games WHERE g.release_year < 2000");
 
     const query2 = queryBuilder
       .from<TableFields>("games", "g")
       .where({ release_year: { $gte: 2000 } })
       .select(["game_name"]);
-    expect(query2.toString()).toBe("SELECT game_name FROM games AS g WHERE g.release_year >= 2000");
+    expect(query2.toString()).toBe("SELECT game_name FROM games WHERE g.release_year >= 2000");
 
     const query3 = queryBuilder
       .from<TableFields>("games", "g")
       .where({ release_year: { $lte: 2000 } })
       .select(["game_name"]);
-    expect(query3.toString()).toBe("SELECT game_name FROM games AS g WHERE g.release_year <= 2000");
+    expect(query3.toString()).toBe("SELECT game_name FROM games WHERE g.release_year <= 2000");
 
     const query4 = queryBuilder
       .from<TableFields>("games", "g")
       .where({ release_year: { $ne: 2000 } })
       .select(["game_name"]);
-    expect(query4.toString()).toBe("SELECT game_name FROM games AS g WHERE g.release_year != 2000");
+    expect(query4.toString()).toBe("SELECT game_name FROM games WHERE g.release_year != 2000");
   });
 
   it("should generate where clause with LIKE operator", () => {
@@ -114,7 +114,7 @@ describe("WHERE functionality", () => {
       .select(["game_id", "game_name"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT game_id, game_name FROM games AS g WHERE g.game_name LIKE '%Tetris%'");
+    expect(sql).toBe("SELECT game_id, game_name FROM games WHERE g.game_name LIKE '%Tetris%'");
   });
 
   it("should handle LIKE with different patterns", () => {
@@ -122,19 +122,19 @@ describe("WHERE functionality", () => {
       .from<TableFields>("games", "g")
       .where({ game_name: { $like: "Super%" } })
       .select(["game_name"]);
-    expect(query1.toString()).toBe("SELECT game_name FROM games AS g WHERE g.game_name LIKE 'Super%'");
+    expect(query1.toString()).toBe("SELECT game_name FROM games WHERE g.game_name LIKE 'Super%'");
 
     const query2 = queryBuilder
       .from<TableFields>("games", "g")
       .where({ game_name: { $like: "%Mario" } })
       .select(["game_name"]);
-    expect(query2.toString()).toBe("SELECT game_name FROM games AS g WHERE g.game_name LIKE '%Mario'");
+    expect(query2.toString()).toBe("SELECT game_name FROM games WHERE g.game_name LIKE '%Mario'");
 
     const query3 = queryBuilder
       .from<TableFields>("games", "g")
       .where({ game_name: { $like: "_etris" } })
       .select(["game_name"]);
-    expect(query3.toString()).toBe("SELECT game_name FROM games AS g WHERE g.game_name LIKE '_etris'");
+    expect(query3.toString()).toBe("SELECT game_name FROM games WHERE g.game_name LIKE '_etris'");
   });
 
   it("should work with LIKE and other conditions", () => {
@@ -148,7 +148,7 @@ describe("WHERE functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT game_id, game_name FROM games AS g WHERE g.game_name LIKE '%Mario%' AND g.release_year > 1990",
+      "SELECT game_id, game_name FROM games WHERE g.game_name LIKE '%Mario%' AND g.release_year > 1990",
     );
   });
 
@@ -159,7 +159,7 @@ describe("WHERE functionality", () => {
       .select(["game_id", "game_name"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT game_id, game_name FROM games AS g WHERE g.game_id = 1");
+    expect(sql).toBe("SELECT game_id, game_name FROM games WHERE g.game_id = 1");
   });
 
   it("should handle $eq with string values", () => {
@@ -169,7 +169,7 @@ describe("WHERE functionality", () => {
       .select(["game_id", "game_name"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT game_id, game_name FROM games AS g WHERE g.game_name = 'Tetris'");
+    expect(sql).toBe("SELECT game_id, game_name FROM games WHERE g.game_name = 'Tetris'");
   });
 
   it("should produce same result for $eq and direct value", () => {
@@ -184,7 +184,7 @@ describe("WHERE functionality", () => {
     const sql2 = query2.toString();
 
     expect(sql1).toBe(sql2);
-    expect(sql1).toBe("SELECT game_id, game_name FROM games AS g WHERE g.game_id = 1");
+    expect(sql1).toBe("SELECT game_id, game_name FROM games WHERE g.game_id = 1");
   });
 
   it("should work with $eq and other operators", () => {
@@ -197,7 +197,7 @@ describe("WHERE functionality", () => {
       .select(["game_id", "game_name"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT game_id, game_name FROM games AS g WHERE g.game_id = 1 AND g.release_year > 2000");
+    expect(sql).toBe("SELECT game_id, game_name FROM games WHERE g.game_id = 1 AND g.release_year > 2000");
   });
 
   describe("OR conditions", () => {
@@ -209,7 +209,7 @@ describe("WHERE functionality", () => {
         .select(["game_id", "game_name"]);
 
       const sql = query.toString();
-      expect(sql).toBe("SELECT game_id, game_name FROM games AS g WHERE (g.game_id = 1) OR (g.game_id = 2)");
+      expect(sql).toBe("SELECT game_id, game_name FROM games WHERE (g.game_id = 1) OR (g.game_id = 2)");
     });
 
     it("should generate OR condition with operators", () => {
@@ -221,7 +221,7 @@ describe("WHERE functionality", () => {
 
       const sql = query.toString();
       expect(sql).toBe(
-        "SELECT game_id, game_name FROM games AS g WHERE (g.release_year > 2020) OR (g.game_name LIKE '%Mario%')",
+        "SELECT game_id, game_name FROM games WHERE (g.release_year > 2020) OR (g.game_name LIKE '%Mario%')",
       );
     });
 
@@ -235,7 +235,7 @@ describe("WHERE functionality", () => {
 
       const sql = query.toString();
       expect(sql).toBe(
-        "SELECT game_id, game_name FROM games AS g WHERE (g.game_id = 1) OR (g.game_id = 2) OR (g.game_name = 'Tetris')",
+        "SELECT game_id, game_name FROM games WHERE (g.game_id = 1) OR (g.game_id = 2) OR (g.game_name = 'Tetris')",
       );
     });
 
@@ -248,7 +248,7 @@ describe("WHERE functionality", () => {
 
       const sql = query.toString();
       expect(sql).toBe(
-        "SELECT game_id, game_name FROM games AS g WHERE (g.game_id = 1 AND g.release_year = 2020) OR (g.game_name = 'Tetris' AND g.release_year > 2019)",
+        "SELECT game_id, game_name FROM games WHERE (g.game_id = 1 AND g.release_year = 2020) OR (g.game_name = 'Tetris' AND g.release_year > 2019)",
       );
     });
 
@@ -281,7 +281,7 @@ describe("WHERE functionality", () => {
 
       const sql = query.toString();
       expect(sql).toBe(
-        "SELECT game_id, game_name FROM games AS g WHERE (g.release_year > 2000 AND g.game_id < 100) OR (g.game_name = 'Classic Game')",
+        "SELECT game_id, game_name FROM games WHERE (g.release_year > 2000 AND g.game_id < 100) OR (g.game_name = 'Classic Game')",
       );
     });
 
@@ -296,7 +296,7 @@ describe("WHERE functionality", () => {
 
       const sql = query.toString();
       expect(sql).toBe(
-        "SELECT game_id, game_name FROM games AS g WHERE (g.game_id = 1) OR (g.game_id = 2) OR (g.game_name = 'Tetris')",
+        "SELECT game_id, game_name FROM games WHERE (g.game_id = 1) OR (g.game_id = 2) OR (g.game_name = 'Tetris')",
       );
     });
 
@@ -311,7 +311,7 @@ describe("WHERE functionality", () => {
 
       const sql = query.toString();
       expect(sql).toBe(
-        "SELECT game_id, game_name FROM games AS g WHERE (g.release_year > 2020) OR (g.game_name LIKE '%Mario%') OR (g.release_year < 1990)",
+        "SELECT game_id, game_name FROM games WHERE (g.release_year > 2020) OR (g.game_name LIKE '%Mario%') OR (g.release_year < 1990)",
       );
     });
 
@@ -329,7 +329,7 @@ describe("WHERE functionality", () => {
 
       const sql = query.toString();
       expect(sql).toBe(
-        "SELECT game_id, game_name FROM games AS g WHERE (g.game_id = 1) OR (g.game_name = 'Tetris' AND g.release_year = 1984) OR (g.game_name = 'Pac-Man' AND g.release_year = 1980)",
+        "SELECT game_id, game_name FROM games WHERE (g.game_id = 1) OR (g.game_name = 'Tetris' AND g.release_year = 1984) OR (g.game_name = 'Pac-Man' AND g.release_year = 1980)",
       );
     });
 
@@ -345,7 +345,7 @@ describe("WHERE functionality", () => {
 
       const sql = query.toString();
       expect(sql).toBe(
-        "SELECT game_id, game_name FROM games AS g WHERE (g.game_id = 1) OR (g.game_name = 'Tetris') OR (g.release_year > 2020)",
+        "SELECT game_id, game_name FROM games WHERE (g.game_id = 1) OR (g.game_name = 'Tetris') OR (g.release_year > 2020)",
       );
     });
 

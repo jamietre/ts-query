@@ -7,7 +7,7 @@ describe("Automatic alias generation", () => {
     const query = queryBuilder.from<TableFields>("games").select(["game_id", "game_name"]);
 
     const sql = query.toString();
-    expect(sql).toMatch(/SELECT game_id, game_name FROM games AS t\d+/);
+    expect(sql).toBe("SELECT game_id, game_name FROM games");
   });
 
   it("should auto-generate aliases for joins", () => {
@@ -33,7 +33,7 @@ describe("Automatic alias generation", () => {
     const query = queryBuilder.from(subquery).select(["*"]);
 
     const sql = query.toString();
-    expect(sql).toMatch(/SELECT \* FROM \(SELECT \* FROM games AS t\d+ WHERE t\d+\.release_year > 2000\) AS t\d+/);
+    expect(sql).toMatch(/SELECT \* FROM \(SELECT \* FROM games WHERE t\d+\.release_year > 2000\) AS t\d+/);
   });
 
   it("should allow mixing explicit and auto-generated aliases", () => {
@@ -78,7 +78,7 @@ describe("Automatic alias generation", () => {
     const query = queryBuilder.from(subquery).select(["*"]);
 
     const sql = query.toString();
-    expect(sql).toMatch(/SELECT \* FROM \(SELECT \* FROM games AS g WHERE g\.release_year > 2000\) AS t\d+/);
+    expect(sql).toMatch(/SELECT \* FROM \(SELECT \* FROM games WHERE g\.release_year > 2000\) AS t\d+/);
   });
 
   it("should handle auto-generated table alias with explicit subquery alias", () => {
@@ -88,7 +88,7 @@ describe("Automatic alias generation", () => {
 
     const sql = query.toString();
     expect(sql).toMatch(
-      /SELECT \* FROM \(SELECT \* FROM games AS t\d+ WHERE t\d+\.release_year > 2000\) AS recent_games/,
+      /SELECT \* FROM \(SELECT \* FROM games WHERE t\d+\.release_year > 2000\) AS recent_games/,
     );
   });
 });

@@ -5,15 +5,15 @@ import { WhereBuilder } from "./whereBuilder.js";
 import { OrderByBuilder } from "./orderByBuilder.js";
 import { LimitBuilder } from "./limitBuilder.js";
 import { AliasGenerator } from "./aliasGenerator.js";
-import type { Query, WhereCondition, Queryable, FieldsBase } from "./types/query.js";
+import type { Query, WhereCondition, Queryable, FieldsBase, FieldsWithStar } from "./types/query.js";
 import type { Join } from "./types/join.js";
-import type { Select } from "./types/select.js";
+import type { Select, FieldAliasMapping } from "./types/select.js";
 import type { Where } from "./types/where.js";
 import type { OrderBy, OrderDirection } from "./types/orderBy.js";
 import type { Limit } from "./types/limit.js";
 
 type FieldMap<T> = {
-  [k: string]: keyof T;
+  [k: string]: keyof T | true;
 };
 
 export class CompoundQueryBuilder<T extends FieldsBase, U extends FieldsBase> implements Query<T & U> {
@@ -36,9 +36,11 @@ export class CompoundQueryBuilder<T extends FieldsBase, U extends FieldsBase> im
     this.joinFieldMapping = options.joinFieldMapping;
     this.aliasGenerator = options.aliasGenerator;
   }
-  select(fields: Array<keyof T & U>): Select<T & U>;
-  select(fields: Partial<Record<keyof T | keyof U, string>>): Select<T & U>;
-  select(fields: Array<keyof T | keyof U> | Partial<Record<keyof T | keyof U, string>>): Select<T & U> {
+  select(fields: Array<FieldsWithStar<T & U> | Partial<Record<FieldsWithStar<T & U>, string | true>>>): Select<T & U>;
+  select(fields: Partial<Record<FieldsWithStar<T & U>, string | true>>): Select<T & U>;
+  select<R extends FieldsBase>(fields: FieldAliasMapping<T & U, R>): Select<R>;
+  select<R extends FieldsBase>(fields: Array<keyof T | FieldAliasMapping<T & U, R>>): Select<R>;
+  select(fields: any): any {
     return new SelectBuilder<T & U>(this as Query<T & U>, fields);
   }
   join<V extends FieldsBase>(tableName: string | Queryable<V>, tableAlias?: string): Join<T & U, V> {
@@ -49,6 +51,7 @@ export class CompoundQueryBuilder<T extends FieldsBase, U extends FieldsBase> im
       // Handle subquery case - create a QueryBuilder that wraps the subquery
       const newQuery = new QueryBuilder<V>({
         tableName: `(${tableName.toString()})`,
+        tableAlias: tableAlias,
         aliasGenerator: this.aliasGenerator,
       });
       return new JoinBuilder<T & U, V>({ query1: this, query2: newQuery, joinType: "INNER" });

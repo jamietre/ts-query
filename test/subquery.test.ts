@@ -14,7 +14,7 @@ describe("Subquery functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT game_id, game_name FROM (SELECT * FROM games AS g WHERE g.release_year > 2000) AS recent_games_count WHERE recent_games_count.game_id = 1",
+      "SELECT game_id, game_name FROM (SELECT * FROM games WHERE g.release_year > 2000) AS recent_games_count WHERE recent_games_count.game_id = 1",
     );
   });
 
@@ -30,7 +30,7 @@ describe("Subquery functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT g.game_id, g.game_name FROM games AS g LEFT JOIN (SELECT * FROM recent_games AS rg WHERE rg.release_year > 2020) AS t1 ON g.game_id = t1.game_id WHERE g.game_id = 1",
+      "SELECT g.game_id, g.game_name FROM games AS g LEFT JOIN (SELECT * FROM recent_games WHERE rg.release_year > 2020) AS t1 ON g.game_id = t1.game_id WHERE g.game_id = 1",
     );
   });
 
@@ -44,7 +44,7 @@ describe("Subquery functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT game_id, game_name FROM (SELECT * FROM games AS g WHERE (g.release_year > 2000) OR (g.game_name LIKE '%Mario%')) AS mario_or_recent",
+      "SELECT game_id, game_name FROM (SELECT * FROM games WHERE (g.release_year > 2000) OR (g.game_name LIKE '%Mario%')) AS mario_or_recent",
     );
   });
 
@@ -79,10 +79,10 @@ describe("Subquery functionality", () => {
     const sql2 = query2.toString();
 
     expect(sql1).toBe(
-      "SELECT game_id, game_name FROM (SELECT * FROM games AS g WHERE g.release_year > 2020) AS recent_games",
+      "SELECT game_id, game_name FROM (SELECT * FROM games WHERE g.release_year > 2020) AS recent_games",
     );
     expect(sql2).toBe(
-      "SELECT game_id, game_name FROM (SELECT * FROM games AS g WHERE g.release_year < 1990 ORDER BY g.release_year DESC) AS old_games",
+      "SELECT game_id, game_name FROM (SELECT * FROM games WHERE g.release_year < 1990 ORDER BY g.release_year DESC) AS old_games",
     );
   });
 
@@ -99,7 +99,7 @@ describe("Subquery functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT id AS game_id, name AS game_name FROM (SELECT * FROM games AS g WHERE (g.release_year > 2020) OR (g.game_name LIKE '%Classic%')) AS filtered_games",
+      "SELECT id AS game_id, name AS game_name FROM (SELECT * FROM games WHERE (g.release_year > 2020) OR (g.game_name LIKE '%Classic%')) AS filtered_games",
     );
   });
 });

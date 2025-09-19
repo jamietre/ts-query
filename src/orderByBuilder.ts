@@ -29,8 +29,8 @@ export class OrderByBuilder<T extends FieldsBase> implements OrderBy<T> {
     return newOrderBy;
   }
 
-  select(fields: Array<FieldsWithStar<T> | Partial<Record<FieldsWithStar<T>, string>>>): Select<T>;
-  select(fields: Partial<Record<FieldsWithStar<T>, string>>): Select<T>;
+  select(fields: Array<FieldsWithStar<T> | Partial<Record<FieldsWithStar<T>, string | true>>>): Select<T>;
+  select(fields: Partial<Record<FieldsWithStar<T>, string | true>>): Select<T>;
   select<R extends FieldsBase>(fields: FieldAliasMapping<T, R>): Select<R>;
   select<R extends FieldsBase>(fields: Array<keyof T | FieldAliasMapping<T, R>>): Select<R>;
   select(fields: any): any {

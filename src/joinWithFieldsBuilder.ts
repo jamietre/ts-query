@@ -5,7 +5,7 @@ import type { Query, FieldsBase } from "./types/query.js";
 import type { JoinWithFields } from "./types/join.js";
 
 type FieldMap<T> = {
-  [k: string]: keyof T;
+  [k: string]: keyof T | true;
 };
 
 export class JoinWithFieldsBuilder<T extends FieldsBase, U extends FieldsBase> implements JoinWithFields<T, U> {

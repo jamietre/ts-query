@@ -542,6 +542,40 @@ class JoinBuilder {
             aliasGenerator: this.aliasGenerator,
         });
     }
+    join(tableName, tableAlias) {
+        // Create a new join where the left side is the joined table (U)
+        if (typeof tableName === "string") {
+            const newQuery = new QueryBuilder({ tableName, tableAlias, aliasGenerator: this.aliasGenerator });
+            return new JoinBuilder({ query1: this.query2, query2: newQuery, joinType: "INNER", aliasGenerator: this.aliasGenerator });
+        }
+        else {
+            // Handle subquery case - create a QueryBuilder that wraps the subquery
+            const newQuery = new QueryBuilder({
+                tableName: `(${tableName.toString()})`,
+                tableAlias: tableAlias,
+                aliasGenerator: this.aliasGenerator,
+            });
+            return new JoinBuilder({ query1: this.query2, query2: newQuery, joinType: "INNER", aliasGenerator: this.aliasGenerator });
+        }
+    }
+    innerJoin(tableName, tableAlias) {
+        return this.join(tableName, tableAlias);
+    }
+    leftJoin(tableName, tableAlias) {
+        if (typeof tableName === "string") {
+            const newQuery = new QueryBuilder({ tableName, tableAlias, aliasGenerator: this.aliasGenerator });
+            return new JoinBuilder({ query1: this.query2, query2: newQuery, joinType: "LEFT", aliasGenerator: this.aliasGenerator });
+        }
+        else {
+            // Handle subquery case - create a QueryBuilder that wraps the subquery
+            const newQuery = new QueryBuilder({
+                tableName: `(${tableName.toString()})`,
+                tableAlias: tableAlias,
+                aliasGenerator: this.aliasGenerator,
+            });
+            return new JoinBuilder({ query1: this.query2, query2: newQuery, joinType: "LEFT", aliasGenerator: this.aliasGenerator });
+        }
+    }
 }
 
 class QueryBuilder {

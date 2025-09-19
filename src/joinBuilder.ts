@@ -5,7 +5,7 @@ import type { Query, FieldsBase } from "./types/query.js";
 import type { Join, JoinWithFields } from "./types/join.js";
 
 type FieldMap<T> = {
-  [k: string]: keyof T;
+  [k: string]: keyof T | true;
 };
 
 export type JoinType = "INNER" | "LEFT";

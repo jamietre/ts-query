@@ -6,14 +6,14 @@ describe("Basic Query Functionality", () => {
   it("should create a basic query with from method", () => {
     const query = queryBuilder.from<TableFields>("games", "g");
 
-    expect(query.toString()).toBe("SELECT * FROM games AS g");
+    expect(query.toString()).toBe("SELECT * FROM games");
   });
 
   it("should generate SQL for simple select with array of fields", () => {
     const query = queryBuilder.from<TableFields>("games", "g").select(["game_id", "game_name"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT game_id, game_name FROM games AS g");
+    expect(sql).toBe("SELECT game_id, game_name FROM games");
   });
 
   it("should generate SQL for simple select with field mapping", () => {
@@ -23,7 +23,7 @@ describe("Basic Query Functionality", () => {
     });
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT id AS game_id, name AS game_name FROM games AS g");
+    expect(sql).toBe("SELECT id AS game_id, name AS game_name FROM games");
   });
 
   it("should handle select with same field name and alias", () => {
@@ -33,7 +33,7 @@ describe("Basic Query Functionality", () => {
     });
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT game_id, title AS game_name FROM games AS g");
+    expect(sql).toBe("SELECT game_id, title AS game_name FROM games");
   });
 
   it("should handle mixed array with strings and objects", () => {
@@ -44,7 +44,7 @@ describe("Basic Query Functionality", () => {
     ]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT game_id, title AS game_name, release_year FROM games AS g");
+    expect(sql).toBe("SELECT game_id, title AS game_name, release_year FROM games");
   });
 
   it("should handle array with only objects", () => {
@@ -53,7 +53,7 @@ describe("Basic Query Functionality", () => {
       .select([{ game_id: "id" }, { game_name: "name" }, { release_year: "year" }]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT id AS game_id, name AS game_name, year AS release_year FROM games AS g");
+    expect(sql).toBe("SELECT id AS game_id, name AS game_name, year AS release_year FROM games");
   });
 
   it("should handle mixed array with multiple fields in objects", () => {
@@ -62,7 +62,7 @@ describe("Basic Query Functionality", () => {
       .select(["game_id", { game_name: "title", release_year: "year" }]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT game_id, title AS game_name, year AS release_year FROM games AS g");
+    expect(sql).toBe("SELECT game_id, title AS game_name, year AS release_year FROM games");
   });
 
   it("should handle multiple joins in sequence", () => {

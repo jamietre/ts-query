@@ -11,7 +11,7 @@ describe("LIMIT functionality", () => {
       .select(["game_id", "game_name"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT game_id, game_name FROM games AS g WHERE g.release_year > 2000 LIMIT 10");
+    expect(sql).toBe("SELECT game_id, game_name FROM games WHERE g.release_year > 2000 LIMIT 10");
   });
 
   it("should generate LIMIT with OFFSET clause", () => {
@@ -22,7 +22,7 @@ describe("LIMIT functionality", () => {
       .select(["game_id", "game_name"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT game_id, game_name FROM games AS g WHERE g.release_year > 2000 LIMIT 10 OFFSET 20");
+    expect(sql).toBe("SELECT game_id, game_name FROM games WHERE g.release_year > 2000 LIMIT 10 OFFSET 20");
   });
 
   it("should generate LIMIT with chained OFFSET", () => {
@@ -34,7 +34,7 @@ describe("LIMIT functionality", () => {
       .select(["game_id", "game_name"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT game_id, game_name FROM games AS g WHERE g.release_year > 2000 LIMIT 10 OFFSET 20");
+    expect(sql).toBe("SELECT game_id, game_name FROM games WHERE g.release_year > 2000 LIMIT 10 OFFSET 20");
   });
 
   it("should work with complex WHERE conditions", () => {
@@ -49,7 +49,7 @@ describe("LIMIT functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT game_id, game_name FROM games AS g WHERE (g.release_year > 2000) OR (g.game_name LIKE '%Mario%') LIMIT 5",
+      "SELECT game_id, game_name FROM games WHERE (g.release_year > 2000) OR (g.game_name LIKE '%Mario%') LIMIT 5",
     );
   });
 
@@ -82,7 +82,7 @@ describe("LIMIT functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT game_id, game_name FROM games AS g WHERE (g.release_year > 2020) OR (g.game_name LIKE '%Classic%') LIMIT 3",
+      "SELECT game_id, game_name FROM games WHERE (g.release_year > 2020) OR (g.game_name LIKE '%Classic%') LIMIT 3",
     );
   });
 
@@ -96,7 +96,7 @@ describe("LIMIT functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT game_id, game_name FROM games AS g WHERE g.release_year > 2000 AND g.game_name LIKE '%Action%' LIMIT 8",
+      "SELECT game_id, game_name FROM games WHERE g.release_year > 2000 AND g.game_name LIKE '%Action%' LIMIT 8",
     );
   });
 
@@ -113,7 +113,7 @@ describe("LIMIT functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT id AS game_id, title AS game_name, year AS release_year FROM games AS g WHERE g.release_year >= 2010 LIMIT 15",
+      "SELECT id AS game_id, title AS game_name, year AS release_year FROM games WHERE g.release_year >= 2010 LIMIT 15",
     );
   });
 
@@ -126,7 +126,7 @@ describe("LIMIT functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT game_id, title AS game_name, release_year FROM games AS g WHERE g.game_id IN (1, 2, 3, 4, 5) LIMIT 3",
+      "SELECT game_id, title AS game_name, release_year FROM games WHERE g.game_id IN (1, 2, 3, 4, 5) LIMIT 3",
     );
   });
 
@@ -138,7 +138,7 @@ describe("LIMIT functionality", () => {
       .select(["game_id", "game_name"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT game_id, game_name FROM games AS g LIMIT 5");
+    expect(sql).toBe("SELECT game_id, game_name FROM games LIMIT 5");
   });
 
   it("should work with LIMIT only (no OFFSET)", () => {
@@ -149,7 +149,7 @@ describe("LIMIT functionality", () => {
       .select(["game_id", "game_name"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT game_id, game_name FROM games AS g WHERE g.game_name = 'Tetris' LIMIT 1");
+    expect(sql).toBe("SELECT game_id, game_name FROM games WHERE g.game_name = 'Tetris' LIMIT 1");
   });
 
   it("should override OFFSET when chained", () => {
@@ -161,6 +161,6 @@ describe("LIMIT functionality", () => {
       .select(["game_id", "game_name"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT game_id, game_name FROM games AS g WHERE g.release_year > 2000 LIMIT 10 OFFSET 15");
+    expect(sql).toBe("SELECT game_id, game_name FROM games WHERE g.release_year > 2000 LIMIT 10 OFFSET 15");
   });
 });

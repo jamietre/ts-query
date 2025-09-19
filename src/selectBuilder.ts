@@ -8,20 +8,20 @@ import type { Select, FieldAliasMapping } from "./types/select.js";
 
 export class SelectBuilder<T extends FieldsBase> implements Select<T> {
   query: Queryable<T>;
-  fields: Partial<Record<FieldsWithStar<T>, string>> = {};
+  fields: Partial<Record<FieldsWithStar<T>, string | true>> = {};
 
   constructor(query: Queryable<T>, fields: any) {
     this.query = query;
 
     if (Array.isArray(fields)) {
-      fields.forEach((field: FieldsWithStar<T> | Partial<Record<FieldsWithStar<T>, string>>) => {
+      fields.forEach((field: FieldsWithStar<T> | Partial<Record<FieldsWithStar<T>, string | true>>) => {
         if (typeof field === "string" || typeof field === "symbol" || typeof field === "number") {
           // Handle string field names (including "*")
           this.fields[field as FieldsWithStar<T>] = field as string;
         } else if (typeof field === "object" && field !== null) {
           // Handle object with field mappings
           Object.entries(field).forEach(([key, value]) => {
-            this.fields[key as FieldsWithStar<T>] = value as string;
+            this.fields[key as FieldsWithStar<T>] = value as string | true;
           });
         }
       });
@@ -30,12 +30,12 @@ export class SelectBuilder<T extends FieldsBase> implements Select<T> {
 
     if (fields && typeof fields === "object") {
       Object.entries(fields).forEach(([key, value]) => {
-        this.fields[key as FieldsWithStar<T>] = value as string;
+        this.fields[key as FieldsWithStar<T>] = value as string | true;
       });
     }
   }
-  select(fields: Array<FieldsWithStar<T> | Partial<Record<FieldsWithStar<T>, string>>>): Select<T>;
-  select(fields: Partial<Record<FieldsWithStar<T>, string>>): Select<T>;
+  select(fields: Array<FieldsWithStar<T> | Partial<Record<FieldsWithStar<T>, string | true>>>): Select<T>;
+  select(fields: Partial<Record<FieldsWithStar<T>, string | true>>): Select<T>;
   select<R extends FieldsBase>(fields: FieldAliasMapping<T, R>): Select<R>;
   select<R extends FieldsBase>(fields: Array<keyof T | FieldAliasMapping<T, R>>): Select<R>;
   select(fields: any): any {
@@ -44,7 +44,10 @@ export class SelectBuilder<T extends FieldsBase> implements Select<T> {
 
   private getSource(query: Queryable<any>): string {
     if (query instanceof QueryBuilder) {
-      return `${query.tableName} AS ${query.tableAlias}`;
+      // Only emit alias if the overall query context has joins OR if this is a subquery
+      const hasJoins = this.queryHasJoins(this.query);
+      const isSubquery = query.tableName.startsWith('(');
+      return (hasJoins || isSubquery) ? `${query.tableName} AS ${query.tableAlias}` : query.tableName;
     } else if (query instanceof CompoundQueryBuilder) {
       const left = this.getSource(query.query1);
       const right = this.getSource(query.query2);
@@ -260,6 +263,16 @@ export class SelectBuilder<T extends FieldsBase> implements Select<T> {
         // Handle "*" case - don't add table aliases
         if (column === "*") {
           return "*";
+        }
+
+        // Handle true case - use the alias as the field name with no alias
+        if (column === true) {
+          let fullColumnName = alias;
+          if (hasJoins) {
+            const tableAlias = this.getTableAliasForField(this.query, alias);
+            fullColumnName = tableAlias ? `${tableAlias}.${alias}` : alias;
+          }
+          return fullColumnName;
         }
 
         // Check if this is a mapped field from join field mapping

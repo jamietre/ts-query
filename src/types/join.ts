@@ -3,7 +3,7 @@ import { Query, FieldsBase } from "./query.js";
 export type JoinType = "INNER" | "LEFT";
 
 type FieldMap<T> = {
-  [k: string]: keyof T;
+  [k: string]: keyof T | true;
 };
 
 export interface Join<T extends FieldsBase, U extends FieldsBase> {

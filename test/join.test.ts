@@ -158,19 +158,27 @@ describe("JOIN functionality", () => {
   });
 
   it("should handle multiple join conditions", () => {
+    const developer = queryBuilder.from<DeveloperFields>("developers").select({ name: "developer_name" });
+
     const query = queryBuilder
       .from<TableFields>("games", "g")
       .leftJoin<ComplexJoinFields>("game_developers", "gd")
       .on({ game_id: "game_id" })
+      .leftJoin(developer, "d")
+      .alias({ created_date: "created_at", developer_name: "name", founded_year: true }) // Select specific fields from developers
+      .on({ developer_id: "id" })
       .select({
         game_id: "id",
         game_name: "name",
         description: "desc",
+        founded_year: true,
       });
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT g.id AS game_id, g.name AS game_name, g.desc AS description FROM games AS g LEFT JOIN game_developers AS gd ON g.game_id = gd.game_id",
+      "SELECT g.id AS game_id, g.name AS game_name, g.desc AS description, d.founded_year FROM games AS g " +
+        "LEFT JOIN game_developers AS gd ON g.game_id = gd.game_id LEFT JOIN " +
+        "(SELECT developer_name AS name FROM developers) AS d ON gd.developer_id = d.id",
     );
   });
 

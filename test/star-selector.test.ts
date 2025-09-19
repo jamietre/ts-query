@@ -12,28 +12,28 @@ describe("Star selector functionality", () => {
     const query = queryBuilder.from<TestTable>("test", "t").select(["*"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT * FROM test AS t");
+    expect(sql).toBe("SELECT * FROM test");
   });
 
   it("should support selecting specific fields", () => {
     const query = queryBuilder.from<TestTable>("test", "t").select(["id", "name"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT id, name FROM test AS t");
+    expect(sql).toBe("SELECT id, name FROM test");
   });
 
   it("should support mixing '*' with specific fields", () => {
     const query = queryBuilder.from<TestTable>("test", "t").select(["*", "id"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT *, id FROM test AS t");
+    expect(sql).toBe("SELECT *, id FROM test");
   });
 
   it("should support '*' in queries with WHERE clauses", () => {
     const query = queryBuilder.from<TestTable>("test", "t").where({ id: 1 }).select(["*"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT * FROM test AS t WHERE t.id = 1");
+    expect(sql).toBe("SELECT * FROM test WHERE t.id = 1");
   });
 
   it("should support '*' in queries with JOIN clauses", () => {
@@ -51,13 +51,13 @@ describe("Star selector functionality", () => {
     const query = queryBuilder.from<TestTable>("test", "t").limit(10).select(["*"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT * FROM test AS t LIMIT 10");
+    expect(sql).toBe("SELECT * FROM test LIMIT 10");
   });
 
   it("should support '*' with ORDER BY", () => {
     const query = queryBuilder.from<TestTable>("test", "t").orderBy("name", "ASC").select(["*"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT * FROM test AS t ORDER BY t.name ASC");
+    expect(sql).toBe("SELECT * FROM test ORDER BY t.name ASC");
   });
 });
