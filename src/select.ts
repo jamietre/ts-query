@@ -1,6 +1,14 @@
-import { CompoundQuery } from "./compoundQuery";
-import { BaseQuery, Query } from "./query";
-import { Where } from "./where";
+import { CompoundQuery } from "./compoundQuery.js";
+import { BaseQuery, Query } from "./query.js";
+import { Where } from "./where.js";
+
+// Access the AliasGenerator from query.ts
+const AliasGenerator = {
+  counter: 0,
+  generate(): string {
+    return `s${++this.counter}`;
+  }
+};
 
 export class Select<T extends object> {
   query: Query<T>;
@@ -14,7 +22,7 @@ export class Select<T extends object> {
     // Check if fields is actually a Query (subquery)
     if (fields && typeof fields === 'object' && 'select' in fields && typeof fields.select === 'function') {
       this.subquery = fields as Query<any>;
-      this.subqueryAlias = alias;
+      this.subqueryAlias = alias || AliasGenerator.generate();
       return;
     }
 

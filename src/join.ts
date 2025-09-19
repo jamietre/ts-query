@@ -1,5 +1,5 @@
-import { CompoundQuery } from "./compoundQuery";
-import { Query } from "./query";
+import { CompoundQuery } from "./compoundQuery.js";
+import { Query } from "./query.js";
 
 export type JoinType = 'INNER' | 'LEFT';
 

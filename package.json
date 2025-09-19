@@ -1,18 +1,45 @@
 {
   "name": "ts-query",
   "version": "1.0.1",
-  "description": "Run Home Assistant automations in javascript",
-  "main": "dist/index.js",
-  "types": "dist/ts-query.d.ts",
+  "description": "Type-safe SQL query builder with fluent API for TypeScript",
+  "keywords": [
+    "typescript",
+    "sql",
+    "query-builder",
+    "type-safe",
+    "fluent-api",
+    "orm"
+  ],
+  "type": "module",
+  "main": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.cjs",
+      "types": "./dist/types/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "packageManager": "pnpm@10.16.1",
   "scripts": {
-    "build": "tsc",
+    "build": "pnpm run clean && pnpm run build:esm && pnpm run build:cjs && pnpm run build:types",
+    "build:esm": "swc src -d dist/esm --strip-leading-paths --ignore '**/*.test.ts'",
+    "build:cjs": "swc src -d dist/cjs --strip-leading-paths --ignore '**/*.test.ts' -C module.type=commonjs --out-file-extension cjs && pnpm run build:cjs-package && node scripts/fix-cjs-imports.js",
+    "build:cjs-package": "echo '{\"type\":\"commonjs\"}' > dist/cjs/package.json",
+    "build:types": "tsc --emitDeclarationOnly --outDir dist/types",
+    "clean": "rm -rf dist",
     "dev": "nodemon",
-    "start": "node dist/index.js",
+    "start": "node dist/esm/index.js",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "prepublishOnly": "pnpm run test:run && pnpm run build"
   },
   "ts-node": {
     "files": true
@@ -28,6 +55,8 @@
     "exec": "sleep 1 && tsc --project tsconfig-scripts.json &&  node --inspect --stack-trace-limit=1000 -r ts-node/register ./src/index.ts"
   },
   "devDependencies": {
+    "@swc/cli": "^0.7.8",
+    "@swc/core": "^1.13.5",
     "@types/node": "^20.12.12",
     "@types/ws": "^8.5.10",
     "nodemon": "^3.1.10",
@@ -37,5 +66,16 @@
     "vitest": "^3.2.4"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/username/ts-query.git"
+  },
+  "homepage": "https://github.com/username/ts-query#readme",
+  "bugs": {
+    "url": "https://github.com/username/ts-query/issues"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
 }

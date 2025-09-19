@@ -1,18 +1,24 @@
 {
     "compilerOptions": {
-        "target": "es2022",
-        "module": "commonjs",
+        "target": "es2020",
+        "lib": ["es2020"],
+        "module": "nodenext",
         "outDir": "./dist",
         "rootDir": "./src",
         "strict": true,
         "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
         "declaration": true,
+        "declarationMap": true,
         "sourceMap": true,
-        "moduleResolution": "node",
+        "moduleResolution": "nodenext",
+        "noEmit": false,
+        "isolatedModules": true,
+        "verbatimModuleSyntax": false,
         "typeRoots": ["node_modules/@types", "types"]
     },
     "include": ["src/**/*.ts"],
-    "exclude": ["node_modules"]
+    "exclude": ["node_modules", "dist", "**/*.test.ts"]
 }

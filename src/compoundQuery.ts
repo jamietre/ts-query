@@ -1,7 +1,7 @@
-import { BaseQuery, Query } from "./query";
-import { Join } from "./join";
-import { Select } from "./select";
-import { Where, WhereCondition } from "./where";
+import { BaseQuery, Query } from "./query.js";
+import { Join } from "./join.js";
+import { Select } from "./select.js";
+import { Where, WhereCondition } from "./where.js";
 
 export class CompoundQuery<T extends object, U extends object> implements Query<T & U> {
   readonly query1: Query<T>;
@@ -14,20 +14,20 @@ export class CompoundQuery<T extends object, U extends object> implements Query<
   }
   select(fields: Array<keyof T & U>): Select<T & U>;
   select(fields: Partial<Record<keyof T | keyof U, string>>): Select<T & U>;
-  select(subquery: Query<any>, alias: string): Select<T & U>;
+  select(subquery: Query<any>, alias?: string): Select<T & U>;
   select(fields: Array<keyof T | keyof U> | Partial<Record<keyof T | keyof U, string>> | Query<any>, alias?: string): Select<T & U> {
     return new Select<T & U>(this as Query<T & U>, fields, alias);
   }
-  join<V extends object>(tableName: string, tableAlias: string): Join<T & U, V> {
+  join<V extends object>(tableName: string, tableAlias?: string): Join<T & U, V> {
     const newQuery = new BaseQuery<V>(tableName, tableAlias);
     return new Join<T & U, V>(this, newQuery, 'INNER');
   }
 
-  innerJoin<V extends object>(tableName: string, tableAlias: string): Join<T & U, V> {
+  innerJoin<V extends object>(tableName: string, tableAlias?: string): Join<T & U, V> {
     return this.join<V>(tableName, tableAlias);
   }
 
-  leftJoin<V extends object>(tableName: string, tableAlias: string): Join<T & U, V> {
+  leftJoin<V extends object>(tableName: string, tableAlias?: string): Join<T & U, V> {
     const newQuery = new BaseQuery<V>(tableName, tableAlias);
     return new Join<T & U, V>(this, newQuery, 'LEFT');
   }
