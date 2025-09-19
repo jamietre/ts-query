@@ -2,10 +2,12 @@ import { QueryBuilder } from "./query.js";
 import { JoinBuilder } from "./join.js";
 import { SelectBuilder } from "./select.js";
 import { WhereBuilder } from "./where.js";
+import { OrderByBuilder } from "./orderBy.js";
 import type { Query, WhereCondition } from "./types/query.js";
 import type { Join } from "./types/join.js";
 import type { Select } from "./types/select.js";
 import type { Where } from "./types/where.js";
+import type { OrderBy, OrderDirection } from "./types/orderBy.js";
 
 export class CompoundQueryBuilder<T extends object, U extends object> implements Query<T & U> {
   readonly query1: Query<T>;
@@ -38,5 +40,9 @@ export class CompoundQueryBuilder<T extends object, U extends object> implements
 
   where(conditions: WhereCondition<T & U>): Where<T & U> {
     return new WhereBuilder<T & U>(this, conditions);
+  }
+
+  orderBy(field: keyof (T & U), direction: OrderDirection = 'ASC'): OrderBy<T & U> {
+    return new OrderByBuilder<T & U>(this, field, direction);
   }
 }

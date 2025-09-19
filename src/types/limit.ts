@@ -1,5 +1,5 @@
-import { Selectable } from "./query.js";
+import { Select } from "./select.js";
 
-export interface Limit<T extends object> extends Selectable<T> {
+export interface Limit<T extends object> extends Select<T> {
   offset(offsetValue: number): Limit<T>;
 }

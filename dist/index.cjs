@@ -14,6 +14,26 @@ class LimitBuilder {
     }
 }
 
+class OrderByBuilder {
+    constructor(query, field, direction = 'ASC') {
+        this.orderFields = [];
+        this.query = query;
+        this.orderFields = [{ field, direction }];
+    }
+    orderBy(field, direction = 'ASC') {
+        const newOrderFields = [...this.orderFields, { field, direction }];
+        const newOrderBy = new OrderByBuilder(this.query, field, direction);
+        newOrderBy.orderFields = newOrderFields;
+        return newOrderBy;
+    }
+    select(fields, alias) {
+        return new SelectBuilder(this, fields, alias);
+    }
+    limit(count, offset) {
+        return new LimitBuilder(this, count, offset);
+    }
+}
+
 class WhereBuilder {
     constructor(query, conditions, orConditions = []) {
         this.orConditions = [];
@@ -48,6 +68,9 @@ class WhereBuilder {
         const newOrConditions = [...this.orConditions, orCondition];
         return new WhereBuilder(this.query, this.conditions, newOrConditions);
     }
+    orderBy(field, direction = 'ASC') {
+        return new OrderByBuilder(this, field, direction);
+    }
     limit(count, offset) {
         return new LimitBuilder(this, count, offset);
     }
@@ -77,18 +100,18 @@ class SelectBuilder {
         this.fields = {};
         this.query = query;
         // Check if fields is actually a Query (subquery)
-        if (fields && typeof fields === 'object' && 'select' in fields && typeof fields.select === 'function') {
+        if (fields && typeof fields === "object" && "select" in fields && typeof fields.select === "function") {
             this.subquery = fields;
             this.subqueryAlias = alias || SubqueryAliasGenerator.generate();
             return;
         }
         if (Array.isArray(fields)) {
             fields.forEach((field) => {
-                if (typeof field === 'string' || typeof field === 'symbol' || typeof field === 'number') {
+                if (typeof field === "string" || typeof field === "symbol" || typeof field === "number") {
                     // Handle string field names
                     this.fields[field] = field;
                 }
-                else if (typeof field === 'object' && field !== null) {
+                else if (typeof field === "object" && field !== null) {
                     // Handle object with field mappings
                     Object.entries(field).forEach(([key, value]) => {
                         this.fields[key] = value;
@@ -97,12 +120,15 @@ class SelectBuilder {
             });
             return;
         }
-        if (fields && typeof fields === 'object') {
+        if (fields && typeof fields === "object") {
             Object.entries(fields).forEach(([key, value]) => {
                 this.fields[key] = value;
             });
         }
         return;
+    }
+    select(fields, alias) {
+        throw new Error("Method not implemented.");
     }
     getSource(query) {
         if (query instanceof QueryBuilder) {
@@ -128,6 +154,9 @@ class SelectBuilder {
         else if (query instanceof LimitBuilder) {
             return this.getSource(query.query);
         }
+        else if (query instanceof OrderByBuilder) {
+            return this.getSource(query.query);
+        }
         return "";
     }
     getRightmostTableAlias(query) {
@@ -144,24 +173,36 @@ class SelectBuilder {
         else if (query instanceof LimitBuilder) {
             return this.getRightmostTableAlias(query.query);
         }
+        else if (query instanceof OrderByBuilder) {
+            return this.getRightmostTableAlias(query.query);
+        }
         return "";
     }
     formatCondition(key, value, tableAlias) {
-        if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        if (typeof value === "object" && value !== null && !Array.isArray(value)) {
             // Handle operators like $gt, $lt, etc.
             const entries = Object.entries(value);
             if (entries.length > 0) {
                 const [operator, operatorValue] = entries[0];
                 switch (operator) {
-                    case '$eq': return `${tableAlias}.${key} = ${this.formatValue(operatorValue)}`;
-                    case '$gt': return `${tableAlias}.${key} > ${this.formatValue(operatorValue)}`;
-                    case '$lt': return `${tableAlias}.${key} < ${this.formatValue(operatorValue)}`;
-                    case '$gte': return `${tableAlias}.${key} >= ${this.formatValue(operatorValue)}`;
-                    case '$lte': return `${tableAlias}.${key} <= ${this.formatValue(operatorValue)}`;
-                    case '$ne': return `${tableAlias}.${key} != ${this.formatValue(operatorValue)}`;
-                    case '$in': return `${tableAlias}.${key} IN (${Array.isArray(operatorValue) ? operatorValue.map(v => this.formatValue(v)).join(', ') : this.formatValue(operatorValue)})`;
-                    case '$like': return `${tableAlias}.${key} LIKE ${this.formatValue(operatorValue)}`;
-                    default: return `${tableAlias}.${key} = ${this.formatValue(operatorValue)}`;
+                    case "$eq":
+                        return `${tableAlias}.${key} = ${this.formatValue(operatorValue)}`;
+                    case "$gt":
+                        return `${tableAlias}.${key} > ${this.formatValue(operatorValue)}`;
+                    case "$lt":
+                        return `${tableAlias}.${key} < ${this.formatValue(operatorValue)}`;
+                    case "$gte":
+                        return `${tableAlias}.${key} >= ${this.formatValue(operatorValue)}`;
+                    case "$lte":
+                        return `${tableAlias}.${key} <= ${this.formatValue(operatorValue)}`;
+                    case "$ne":
+                        return `${tableAlias}.${key} != ${this.formatValue(operatorValue)}`;
+                    case "$in":
+                        return `${tableAlias}.${key} IN (${Array.isArray(operatorValue) ? operatorValue.map((v) => this.formatValue(v)).join(", ") : this.formatValue(operatorValue)})`;
+                    case "$like":
+                        return `${tableAlias}.${key} LIKE ${this.formatValue(operatorValue)}`;
+                    default:
+                        return `${tableAlias}.${key} = ${this.formatValue(operatorValue)}`;
                 }
             }
         }
@@ -177,32 +218,34 @@ class SelectBuilder {
                 const tableAlias = this.getTableAliasForField(query, key);
                 return this.formatCondition(key, value, tableAlias);
             })
-                .join(' AND ');
+                .join(" AND ");
             // Handle inline OR conditions
-            const inlineOrClauses = (inlineOrConditions || []).map(orCondition => {
+            const inlineOrClauses = (inlineOrConditions || []).map((orCondition) => {
                 const orClauses = Object.entries(orCondition)
                     .map(([key, value]) => {
                     const tableAlias = this.getTableAliasForField(query, key);
                     return this.formatCondition(key, value, tableAlias);
                 })
-                    .join(' AND ');
+                    .join(" AND ");
                 return `(${orClauses})`;
             });
             // Handle chained OR conditions
-            const chainedOrConditions = query.orConditions.map(orCondition => {
+            const chainedOrConditions = query.orConditions.map((orCondition) => {
                 const orClauses = Object.entries(orCondition.conditions)
                     .map(([key, value]) => {
                     const tableAlias = this.getTableAliasForField(query, key);
                     return this.formatCondition(key, value, tableAlias);
                 })
-                    .join(' AND ');
+                    .join(" AND ");
                 return `(${orClauses})`;
             });
             // Combine all OR conditions
             const allOrConditions = [...inlineOrClauses, ...chainedOrConditions];
             let allConditions = conditions;
             if (allOrConditions.length > 0) {
-                allConditions = allConditions ? `(${allConditions}) OR ${allOrConditions.join(' OR ')}` : allOrConditions.join(' OR ');
+                allConditions = allConditions
+                    ? `(${allConditions}) OR ${allOrConditions.join(" OR ")}`
+                    : allOrConditions.join(" OR ");
             }
             const nestedWhere = this.getWhereClause(query.query);
             return nestedWhere ? `${allConditions} AND ${nestedWhere}` : allConditions;
@@ -210,7 +253,10 @@ class SelectBuilder {
         else if (query instanceof LimitBuilder) {
             return this.getWhereClause(query.query);
         }
-        return '';
+        else if (query instanceof OrderByBuilder) {
+            return this.getWhereClause(query.query);
+        }
+        return "";
     }
     getTableAliasForField(query, _field) {
         // For now, just get the rightmost alias - in a more sophisticated implementation,
@@ -225,10 +271,23 @@ class SelectBuilder {
             }
             return limitClause;
         }
-        return '';
+        else if (query instanceof OrderByBuilder) {
+            return this.getLimitClause(query.query);
+        }
+        return "";
+    }
+    getOrderByClause(query) {
+        if (query instanceof OrderByBuilder) {
+            const orderFields = query.orderFields.map(({ field, direction }) => {
+                const tableAlias = this.getRightmostTableAlias(query.query);
+                return `${tableAlias}.${String(field)} ${direction}`;
+            }).join(', ');
+            return `ORDER BY ${orderFields}`;
+        }
+        return "";
     }
     formatValue(value) {
-        if (typeof value === 'string') {
+        if (typeof value === "string") {
             return `'${value}'`;
         }
         return String(value);
@@ -264,7 +323,24 @@ class SelectBuilder {
             }
             return sql;
         }
-        return 'SELECT *';
+        else if (query instanceof OrderByBuilder) {
+            const source = this.getSource(query.query);
+            const whereClause = this.getWhereClause(query.query);
+            const orderByClause = this.getOrderByClause(query);
+            const limitClause = this.getLimitClause(query.query);
+            let sql = `SELECT * FROM ${source}`;
+            if (whereClause) {
+                sql += ` WHERE ${whereClause}`;
+            }
+            if (orderByClause) {
+                sql += ` ${orderByClause}`;
+            }
+            if (limitClause) {
+                sql += ` ${limitClause}`;
+            }
+            return sql;
+        }
+        return "SELECT *";
     }
     toString() {
         // Handle subquery case
@@ -272,10 +348,14 @@ class SelectBuilder {
             const subquerySQL = this.generateSubquerySQL(this.subquery);
             const source = this.getSource(this.query);
             const whereClause = this.getWhereClause(this.query);
+            const orderByClause = this.getOrderByClause(this.query);
             const limitClause = this.getLimitClause(this.query);
             let sql = `SELECT (${subquerySQL}) AS ${this.subqueryAlias} FROM ${source}`;
             if (whereClause) {
                 sql += ` WHERE ${whereClause}`;
+            }
+            if (orderByClause) {
+                sql += ` ${orderByClause}`;
             }
             if (limitClause) {
                 sql += ` ${limitClause}`;
@@ -293,10 +373,14 @@ class SelectBuilder {
             .join(", ");
         const source = this.getSource(this.query);
         const whereClause = this.getWhereClause(this.query);
+        const orderByClause = this.getOrderByClause(this.query);
         const limitClause = this.getLimitClause(this.query);
         let sql = `SELECT ${fields} FROM ${source}`;
         if (whereClause) {
             sql += ` WHERE ${whereClause}`;
+        }
+        if (orderByClause) {
+            sql += ` ${orderByClause}`;
         }
         if (limitClause) {
             sql += ` ${limitClause}`;
@@ -328,6 +412,9 @@ class CompoundQueryBuilder {
     where(conditions) {
         return new WhereBuilder(this, conditions);
     }
+    orderBy(field, direction = 'ASC') {
+        return new OrderByBuilder(this, field, direction);
+    }
 }
 
 class JoinBuilder {
@@ -355,17 +442,20 @@ class QueryBuilder {
     }
     join(tableName, tableAlias) {
         const newQuery = new QueryBuilder(tableName, tableAlias || AliasGenerator.generate());
-        return new JoinBuilder(this, newQuery, 'INNER');
+        return new JoinBuilder(this, newQuery, "INNER");
     }
     innerJoin(tableName, tableAlias) {
         return this.join(tableName, tableAlias);
     }
     leftJoin(tableName, tableAlias) {
         const newQuery = new QueryBuilder(tableName, tableAlias || AliasGenerator.generate());
-        return new JoinBuilder(this, newQuery, 'LEFT');
+        return new JoinBuilder(this, newQuery, "LEFT");
     }
     where(conditions) {
         return new WhereBuilder(this, conditions);
+    }
+    orderBy(field, direction = 'ASC') {
+        return new OrderByBuilder(this, field, direction);
     }
 }
 
@@ -373,6 +463,7 @@ exports.AliasGenerator = AliasGenerator;
 exports.CompoundQueryBuilder = CompoundQueryBuilder;
 exports.JoinBuilder = JoinBuilder;
 exports.LimitBuilder = LimitBuilder;
+exports.OrderByBuilder = OrderByBuilder;
 exports.QueryBuilder = QueryBuilder;
 exports.SelectBuilder = SelectBuilder;
 exports.SubqueryAliasGenerator = SubqueryAliasGenerator;

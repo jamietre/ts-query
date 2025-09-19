@@ -2,11 +2,13 @@ import { QueryBuilder } from "./query.js";
 import { SelectBuilder } from "./select.js";
 import { JoinBuilder } from "./join.js";
 import { LimitBuilder } from "./limit.js";
+import { OrderByBuilder } from "./orderBy.js";
 import type { Query } from "./types/query.js";
 import type { Select } from "./types/select.js";
 import type { Join } from "./types/join.js";
 import type { Limit } from "./types/limit.js";
 import type { Where } from "./types/where.js";
+import type { OrderBy, OrderDirection } from "./types/orderBy.js";
 
 type Condition<T extends object> = {
   [K in keyof T]?: T[K] | { $eq: T[K] } | { $gt: T[K] } | { $lt: T[K] } | { $gte: T[K] } | { $lte: T[K] } | { $ne: T[K] } | { $in: T[K][] } | { $like: string };
@@ -66,6 +68,10 @@ export class WhereBuilder<T extends object> implements Query<T> {
     };
     const newOrConditions = [...this.orConditions, orCondition];
     return new WhereBuilder<T>(this.query, this.conditions, newOrConditions);
+  }
+
+  orderBy(field: keyof T, direction: OrderDirection = 'ASC'): OrderBy<T> {
+    return new OrderByBuilder<T>(this, field, direction);
   }
 
   limit(count: number, offset?: number): Limit<T> {

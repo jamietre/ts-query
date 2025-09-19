@@ -1,4 +1,8 @@
 interface Select<T extends object> {
+    select(fields: Array<keyof T | Partial<Record<keyof T, string>>>): Select<T>;
+    select(fields: Partial<Record<keyof T, string>>): Select<T>;
+    select(subquery: Query<any>, alias?: string): Select<T>;
+    select(fields: Array<keyof T | Partial<Record<keyof T, string>>> | Partial<Record<keyof T, string>> | Query<any>, alias?: string): Select<T>;
     toString(): string;
 }
 
@@ -7,8 +11,19 @@ interface Join<T extends object, U extends object> {
     on(condition: Partial<Record<keyof T, keyof U>>): Query<T & U>;
 }
 
-interface Where<T extends object> extends Selectable<T> {
+interface Limit<T extends object> extends Select<T> {
+    offset(offsetValue: number): Limit<T>;
+}
+
+type OrderDirection = 'ASC' | 'DESC';
+interface OrderBy<T extends object> extends Select<T> {
+    orderBy(field: keyof T, direction?: OrderDirection): OrderBy<T>;
+    limit(count: number, offset?: number): Limit<T>;
+}
+
+interface Where<T extends object> extends Select<T> {
     or(conditions: any): Where<T>;
+    orderBy(field: keyof T, direction?: OrderDirection): OrderBy<T>;
     limit(count: number, offset?: number): any;
 }
 
@@ -23,6 +38,7 @@ interface Query<T extends object> extends Selectable<T> {
     innerJoin<U extends object>(tableName: string, tableAlias?: string): Join<T, U>;
     leftJoin<U extends object>(tableName: string, tableAlias?: string): Join<T, U>;
     where(conditions: WhereCondition$1<T>): Where<T>;
+    orderBy(field: keyof T, direction?: OrderDirection): OrderBy<T>;
 }
 type WhereCondition$1<T extends object> = {
     [K in keyof T]?: T[K] | {
@@ -43,7 +59,7 @@ type WhereCondition$1<T extends object> = {
         $like: string;
     };
 } & {
-    "or"?: Array<Condition$1<T>>;
+    or?: Array<Condition$1<T>>;
 };
 type Condition$1<T extends object> = {
     [K in keyof T]?: T[K] | {
@@ -65,7 +81,7 @@ type Condition$1<T extends object> = {
     };
 };
 type OrCondition$1<T extends object> = {
-    type: 'or';
+    type: "or";
     conditions: Condition$1<T>;
 };
 
@@ -81,24 +97,26 @@ declare class QueryBuilder<T extends object> implements Query<T> {
     innerJoin<U extends object>(tableName: string, tableAlias?: string): Join<T, U>;
     leftJoin<U extends object>(tableName: string, tableAlias?: string): Join<T, U>;
     where(conditions: WhereCondition$1<T>): Where<T>;
+    orderBy(field: keyof T, direction?: OrderDirection): OrderBy<T>;
 }
 
-interface Limit<T extends object> extends Selectable<T> {
-    offset(offsetValue: number): Limit<T>;
-}
-
-declare class SelectBuilder<T extends object> {
-    query: Query<T> | Limit<T>;
+declare class SelectBuilder<T extends object> implements Select<T> {
+    query: Query<T> | Limit<T> | OrderBy<T>;
     fields: Partial<Record<keyof T, string>>;
     subquery?: Query<any>;
     subqueryAlias?: string;
-    constructor(query: Query<T> | Limit<T>, fields: any, alias?: string);
+    constructor(query: Query<T> | Limit<T> | OrderBy<T>, fields: any, alias?: string);
+    select(fields: (keyof T | Partial<Record<keyof T, string>>)[]): Select<T>;
+    select(fields: Partial<Record<keyof T, string>>): Select<T>;
+    select(subquery: Query<any>, alias?: string): Select<T>;
+    select(fields: Partial<Record<keyof T, string>> | Query<any> | (keyof T | Partial<Record<keyof T, string>>)[], alias?: string): Select<T>;
     private getSource;
     private getRightmostTableAlias;
     private formatCondition;
     private getWhereClause;
     private getTableAliasForField;
     private getLimitClause;
+    private getOrderByClause;
     private formatValue;
     private generateSubquerySQL;
     toString(): string;
@@ -143,6 +161,7 @@ declare class WhereBuilder<T extends object> implements Query<T> {
     leftJoin<U extends object>(tableName: string, tableAlias?: string): Join<T, U>;
     where(conditions: WhereCondition<T>): Where<T>;
     or(conditions: Condition<T>): Where<T>;
+    orderBy(field: keyof T, direction?: OrderDirection): OrderBy<T>;
     limit(count: number, offset?: number): Limit<T>;
 }
 
@@ -168,9 +187,10 @@ declare class CompoundQueryBuilder<T extends object, U extends object> implement
     innerJoin<V extends object>(tableName: string, tableAlias?: string): Join<T & U, V>;
     leftJoin<V extends object>(tableName: string, tableAlias?: string): Join<T & U, V>;
     where(conditions: WhereCondition$1<T & U>): Where<T & U>;
+    orderBy(field: keyof (T & U), direction?: OrderDirection): OrderBy<T & U>;
 }
 
-declare class LimitBuilder<T extends object> implements Selectable<T> {
+declare class LimitBuilder<T extends object> implements Select<T> {
     query: Query<T>;
     limitValue: number;
     offsetValue?: number;
@@ -179,6 +199,20 @@ declare class LimitBuilder<T extends object> implements Selectable<T> {
     select(fields: Array<keyof T | Partial<Record<keyof T, string>>>): Select<T>;
     select(fields: Partial<Record<keyof T, string>>): Select<T>;
     select(subquery: Query<any>, alias?: string): Select<T>;
+}
+
+declare class OrderByBuilder<T extends object> implements OrderBy<T> {
+    query: Query<T>;
+    orderFields: Array<{
+        field: keyof T;
+        direction: OrderDirection;
+    }>;
+    constructor(query: Query<T>, field: keyof T, direction?: OrderDirection);
+    orderBy(field: keyof T, direction?: OrderDirection): OrderBy<T>;
+    select(fields: Array<keyof T | Partial<Record<keyof T, string>>>): Select<T>;
+    select(fields: Partial<Record<keyof T, string>>): Select<T>;
+    select(subquery: Query<any>, alias?: string): Select<T>;
+    limit(count: number, offset?: number): Limit<T>;
 }
 
 declare class AliasGenerator {
@@ -192,5 +226,5 @@ declare class SubqueryAliasGenerator {
     static reset(): void;
 }
 
-export { AliasGenerator, CompoundQueryBuilder, JoinBuilder, LimitBuilder, QueryBuilder, SelectBuilder, SubqueryAliasGenerator, WhereBuilder };
-export type { Join, JoinType$1 as JoinType, Limit, OrCondition$1 as OrCondition, Query, Select, Selectable, Where, WhereCondition$1 as WhereCondition };
+export { AliasGenerator, CompoundQueryBuilder, JoinBuilder, LimitBuilder, OrderByBuilder, QueryBuilder, SelectBuilder, SubqueryAliasGenerator, WhereBuilder };
+export type { Join, JoinType$1 as JoinType, Limit, OrCondition$1 as OrCondition, OrderBy, OrderDirection, Query, Select, Where, WhereCondition$1 as WhereCondition };

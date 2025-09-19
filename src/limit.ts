@@ -1,9 +1,9 @@
 import { SelectBuilder } from "./select.js";
-import type { Query, Selectable } from "./types/query.js";
+import type { Query } from "./types/query.js";
 import type { Select } from "./types/select.js";
 import type { Limit } from "./types/limit.js";
 
-export class LimitBuilder<T extends object> implements Selectable<T> {
+export class LimitBuilder<T extends object> implements Select<T> {
   query: Query<T>;
   limitValue: number;
   offsetValue?: number;
@@ -21,7 +21,10 @@ export class LimitBuilder<T extends object> implements Selectable<T> {
   select(fields: Array<keyof T | Partial<Record<keyof T, string>>>): Select<T>;
   select(fields: Partial<Record<keyof T, string>>): Select<T>;
   select(subquery: Query<any>, alias?: string): Select<T>;
-  select(fields: Array<keyof T | Partial<Record<keyof T, string>>> | Partial<Record<keyof T, string>> | Query<any>, alias?: string): Select<T> {
+  select(
+    fields: Array<keyof T | Partial<Record<keyof T, string>>> | Partial<Record<keyof T, string>> | Query<any>,
+    alias?: string,
+  ): Select<T> {
     return new SelectBuilder<T>(this, fields, alias);
   }
 }
