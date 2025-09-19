@@ -1,6 +1,6 @@
 import { Select } from "./select.js";
 import { Join } from "./join.js";
-import { Where } from "./where.js";
+import { Where, Condition } from "./where.js";
 import { OrderBy, OrderDirection } from "./orderBy.js";
 
 export interface Selectable<T extends object> {
@@ -21,35 +21,7 @@ export interface Query<T extends object> extends Selectable<T> {
   orderBy(field: keyof T, direction?: OrderDirection): OrderBy<T>;
 }
 
-export type WhereCondition<T extends object> = {
-  [K in keyof T]?:
-    | T[K]
-    | { $eq: T[K] }
-    | { $gt: T[K] }
-    | { $lt: T[K] }
-    | { $gte: T[K] }
-    | { $lte: T[K] }
-    | { $ne: T[K] }
-    | { $in: T[K][] }
-    | { $like: string };
-} & {
+export type WhereCondition<T extends object> = Condition<T> & {
   or?: Array<Condition<T>>;
 };
 
-type Condition<T extends object> = {
-  [K in keyof T]?:
-    | T[K]
-    | { $eq: T[K] }
-    | { $gt: T[K] }
-    | { $lt: T[K] }
-    | { $gte: T[K] }
-    | { $lte: T[K] }
-    | { $ne: T[K] }
-    | { $in: T[K][] }
-    | { $like: string };
-};
-
-export type OrCondition<T extends object> = {
-  type: "or";
-  conditions: Condition<T>;
-};

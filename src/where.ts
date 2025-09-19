@@ -3,25 +3,12 @@ import { SelectBuilder } from "./select.js";
 import { JoinBuilder } from "./join.js";
 import { LimitBuilder } from "./limit.js";
 import { OrderByBuilder } from "./orderBy.js";
-import type { Query } from "./types/query.js";
+import type { Query, WhereCondition } from "./types/query.js";
 import type { Select } from "./types/select.js";
 import type { Join } from "./types/join.js";
 import type { Limit } from "./types/limit.js";
-import type { Where } from "./types/where.js";
+import type { Where, Condition, OrCondition } from "./types/where.js";
 import type { OrderBy, OrderDirection } from "./types/orderBy.js";
-
-type Condition<T extends object> = {
-  [K in keyof T]?: T[K] | { $eq: T[K] } | { $gt: T[K] } | { $lt: T[K] } | { $gte: T[K] } | { $lte: T[K] } | { $ne: T[K] } | { $in: T[K][] } | { $like: string };
-}
-
-export type WhereCondition<T extends object> = Condition<T> & {
-  "or"?: Array<Condition<T>>;
-};
-
-export type OrCondition<T extends object> = {
-  type: 'or';
-  conditions: Condition<T>;
-};
 
 export class WhereBuilder<T extends object> implements Query<T> {
   readonly query: Query<T>;

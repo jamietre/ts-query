@@ -12,9 +12,6 @@ import type { OrderBy, OrderDirection } from "./types/orderBy.js";
 export class QueryBuilder<T extends object> implements Query<T> {
   readonly tableName: string;
   readonly tableAlias: string;
-  static from<T extends object>(tableName: string, tableAlias?: string) {
-    return new QueryBuilder<T>(tableName, tableAlias || AliasGenerator.generate());
-  }
   constructor(tableName: string, tableAlias?: string) {
     this.tableName = tableName;
     this.tableAlias = tableAlias || AliasGenerator.generate();

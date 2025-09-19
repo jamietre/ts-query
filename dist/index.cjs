@@ -1,5 +1,24 @@
 'use strict';
 
+class AliasGenerator {
+    static generate() {
+        return `t${++this.counter}`;
+    }
+    static reset() {
+        this.counter = 0;
+    }
+}
+AliasGenerator.counter = 0;
+class SubqueryAliasGenerator {
+    static generate() {
+        return `s${++this.counter}`;
+    }
+    static reset() {
+        this.counter = 0;
+    }
+}
+SubqueryAliasGenerator.counter = 0;
+
 class LimitBuilder {
     constructor(query, limit, offset) {
         this.query = query;
@@ -30,7 +49,7 @@ class OrderByBuilder {
         return new SelectBuilder(this, fields, alias);
     }
     limit(count, offset) {
-        return new LimitBuilder(this, count, offset);
+        return new LimitBuilder(this.query, count, offset);
     }
 }
 
@@ -75,25 +94,6 @@ class WhereBuilder {
         return new LimitBuilder(this, count, offset);
     }
 }
-
-class AliasGenerator {
-    static generate() {
-        return `t${++this.counter}`;
-    }
-    static reset() {
-        this.counter = 0;
-    }
-}
-AliasGenerator.counter = 0;
-class SubqueryAliasGenerator {
-    static generate() {
-        return `s${++this.counter}`;
-    }
-    static reset() {
-        this.counter = 0;
-    }
-}
-SubqueryAliasGenerator.counter = 0;
 
 class SelectBuilder {
     constructor(query, fields, alias) {
@@ -430,9 +430,6 @@ class JoinBuilder {
 }
 
 class QueryBuilder {
-    static from(tableName, tableAlias) {
-        return new QueryBuilder(tableName, tableAlias || AliasGenerator.generate());
-    }
     constructor(tableName, tableAlias) {
         this.tableName = tableName;
         this.tableAlias = tableAlias || AliasGenerator.generate();
@@ -454,18 +451,19 @@ class QueryBuilder {
     where(conditions) {
         return new WhereBuilder(this, conditions);
     }
-    orderBy(field, direction = 'ASC') {
+    orderBy(field, direction = "ASC") {
         return new OrderByBuilder(this, field, direction);
     }
 }
 
-exports.AliasGenerator = AliasGenerator;
-exports.CompoundQueryBuilder = CompoundQueryBuilder;
-exports.JoinBuilder = JoinBuilder;
-exports.LimitBuilder = LimitBuilder;
-exports.OrderByBuilder = OrderByBuilder;
+// Main entry point for ts-query package
+// Create the main query API
+const queryBuilder = {
+    from(tableName, tableAlias) {
+        return new QueryBuilder(tableName, tableAlias || AliasGenerator.generate());
+    },
+};
+
 exports.QueryBuilder = QueryBuilder;
-exports.SelectBuilder = SelectBuilder;
-exports.SubqueryAliasGenerator = SubqueryAliasGenerator;
-exports.WhereBuilder = WhereBuilder;
+exports.queryBuilder = queryBuilder;
 //# sourceMappingURL=index.cjs.map

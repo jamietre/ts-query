@@ -32,6 +32,6 @@ export class OrderByBuilder<T extends object> implements OrderBy<T> {
   }
 
   limit(count: number, offset?: number): Limit<T> {
-    return new LimitBuilder<T>(this, count, offset);
+    return new LimitBuilder<T>(this.query, count, offset);
   }
 }
