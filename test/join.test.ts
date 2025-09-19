@@ -184,4 +184,26 @@ describe("JOIN functionality", () => {
       "SELECT id AS game_id, name AS game_name, platform AS platform_name FROM games AS g LEFT JOIN developers AS d ON g.game_id = d.game_id LEFT JOIN publishers AS p ON d.game_id = p.game_id LEFT JOIN platforms AS pl ON p.game_id = pl.game_id",
     );
   });
+
+  describe("conflicting field names with aliases", () => {
+    type TableFields = {
+      game_id: number;
+      game_name: string;
+      description: string;
+    };
+
+    it("should handle select with same field name and alias", () => {
+      const query = queryBuilder
+        .from<TableFields>("games")
+        .join<TableFields>("games2")
+        .on({ game_id: "game_id" })
+        .select({
+          game_id: "game_id", // Same name as alias
+          game_name: "game_name", // Different alias
+        });
+
+      const sql = query.toString();
+      expect(sql).toBe("SELECT game_id, game_name FROM games INNER JOIN games2 ON games.game_id = games2.game_id");
+    });
+  });
 });

@@ -3,24 +3,25 @@ import { QueryBuilder } from "./queryBuilder.js";
 import { WhereBuilder } from "./whereBuilder.js";
 import { LimitBuilder } from "./limitBuilder.js";
 import { OrderByBuilder } from "./orderByBuilder.js";
-import type { Queryable, FieldsBase } from "./types/query.js";
-import type { Select } from "./types/select.js";
+import type { Queryable, FieldsBase, FieldsWithStar } from "./types/query.js";
+import type { Select, FieldAliasMapping } from "./types/select.js";
+
 export class SelectBuilder<T extends FieldsBase> implements Select<T> {
   query: Queryable<T>;
-  fields: Partial<Record<keyof T, string>> = {};
+  fields: Partial<Record<FieldsWithStar<T>, string>> = {};
 
   constructor(query: Queryable<T>, fields: any) {
     this.query = query;
 
     if (Array.isArray(fields)) {
-      fields.forEach((field: keyof T | Partial<Record<keyof T, string>>) => {
+      fields.forEach((field: FieldsWithStar<T> | Partial<Record<FieldsWithStar<T>, string>>) => {
         if (typeof field === "string" || typeof field === "symbol" || typeof field === "number") {
-          // Handle string field names
-          this.fields[field as keyof T] = field as string;
+          // Handle string field names (including "*")
+          this.fields[field as FieldsWithStar<T>] = field as string;
         } else if (typeof field === "object" && field !== null) {
           // Handle object with field mappings
           Object.entries(field).forEach(([key, value]) => {
-            this.fields[key as keyof T] = value as string;
+            this.fields[key as FieldsWithStar<T>] = value as string;
           });
         }
       });
@@ -29,14 +30,16 @@ export class SelectBuilder<T extends FieldsBase> implements Select<T> {
 
     if (fields && typeof fields === "object") {
       Object.entries(fields).forEach(([key, value]) => {
-        this.fields[key as keyof T] = value as string;
+        this.fields[key as FieldsWithStar<T>] = value as string;
       });
     }
   }
-  select(fields: (keyof T | Partial<Record<keyof T, string>>)[]): Select<T>;
-  select(fields: Partial<Record<keyof T, string>>): Select<T>;
-  select(fields: Partial<Record<keyof T, string>> | (keyof T | Partial<Record<keyof T, string>>)[]): Select<T> {
-    return new SelectBuilder<T>(this.query, fields);
+  select(fields: Array<FieldsWithStar<T> | Partial<Record<FieldsWithStar<T>, string>>>): Select<T>;
+  select(fields: Partial<Record<FieldsWithStar<T>, string>>): Select<T>;
+  select<R extends FieldsBase>(fields: FieldAliasMapping<T, R>): Select<R>;
+  select<R extends FieldsBase>(fields: Array<keyof T | FieldAliasMapping<T, R>>): Select<R>;
+  select(fields: any): any {
+    return new SelectBuilder(this.query, fields);
   }
 
   private getSource(query: Queryable<any>): string {

@@ -53,7 +53,7 @@ class OrderByBuilder {
         newOrderBy.orderFields = newOrderFields;
         return newOrderBy;
     }
-    select(fields, alias) {
+    select(fields) {
         return new SelectBuilder(this, fields);
     }
     limit(count, offset) {
@@ -72,7 +72,7 @@ class WhereBuilder {
         this.orConditions = options.orConditions;
         this.aliasGenerator = options.aliasGenerator;
     }
-    select(fields, alias) {
+    select(fields) {
         return new SelectBuilder(this, fields);
     }
     join(tableName, tableAlias) {
@@ -158,7 +158,7 @@ class SelectBuilder {
         if (Array.isArray(fields)) {
             fields.forEach((field) => {
                 if (typeof field === "string" || typeof field === "symbol" || typeof field === "number") {
-                    // Handle string field names
+                    // Handle string field names (including "*")
                     this.fields[field] = field;
                 }
                 else if (typeof field === "object" && field !== null) {
@@ -453,7 +453,7 @@ class QueryBuilder {
         this.tableName = options.tableName;
         this.tableAlias = options.tableAlias || this.aliasGenerator.generate();
     }
-    select(fields, alias) {
+    select(fields) {
         return new SelectBuilder(this, fields);
     }
     join(tableName, tableAlias) {

@@ -1,7 +1,7 @@
 import { SelectBuilder } from "./selectBuilder.js";
 import { LimitBuilder } from "./limitBuilder.js";
-import type { Query, FieldsBase } from "./types/query.js";
-import type { Select } from "./types/select.js";
+import type { Query, FieldsBase, FieldsWithStar } from "./types/query.js";
+import type { Select, FieldAliasMapping } from "./types/select.js";
 import type { OrderBy, OrderDirection } from "./types/orderBy.js";
 import type { Limit } from "./types/limit.js";
 import { AliasGenerator } from "./aliasGenerator.js";
@@ -29,14 +29,12 @@ export class OrderByBuilder<T extends FieldsBase> implements OrderBy<T> {
     return newOrderBy;
   }
 
-  select(fields: Array<keyof T | Partial<Record<keyof T, string>>>): Select<T>;
-  select(fields: Partial<Record<keyof T, string>>): Select<T>;
-  select(subquery: Query<any>, alias?: string): Select<T>;
-  select(
-    fields: Array<keyof T | Partial<Record<keyof T, string>>> | Partial<Record<keyof T, string>> | Query<any>,
-    alias?: string,
-  ): Select<T> {
-    return new SelectBuilder<T>(this, fields);
+  select(fields: Array<FieldsWithStar<T> | Partial<Record<FieldsWithStar<T>, string>>>): Select<T>;
+  select(fields: Partial<Record<FieldsWithStar<T>, string>>): Select<T>;
+  select<R extends FieldsBase>(fields: FieldAliasMapping<T, R>): Select<R>;
+  select<R extends FieldsBase>(fields: Array<keyof T | FieldAliasMapping<T, R>>): Select<R>;
+  select(fields: any): any {
+    return new SelectBuilder(this, fields);
   }
 
   limit(count: number, offset?: number): Limit<T> {

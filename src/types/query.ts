@@ -7,8 +7,11 @@ import { Limit } from "../index.js";
 // Base type for query fields that includes "*" for selecting all
 export type FieldsBase = {};
 
+// Type that allows fields from T or "*" for selecting all fields
+export type FieldsWithStar<T> = keyof T | "*";
+
 // anything that can start a query
-export interface Queryable<T extends FieldsBase> {
+export interface Queryable<T = never> {
   toString(): string;
 }
 
@@ -19,7 +22,7 @@ export type AnyQueryable<T extends FieldsBase> = Limit<T> | Where<T> | OrderBy<T
 // It extends Queryable to allow using it as a subquery in joins and selects
 export interface Query<T extends FieldsBase> extends Select<T>, Queryable<T> {
   // Join with table name - requires explicit type parameter
-  join<U extends FieldsBase>(tableName: string, tableAlias?: string): Join<T, U>;
+  join<U extends FieldsBase = never>(tableName: string, tableAlias?: string): Join<T, U>;
   innerJoin<U extends FieldsBase>(tableName: string, tableAlias?: string): Join<T, U>;
   leftJoin<U extends FieldsBase>(tableName: string, tableAlias?: string): Join<T, U>;
 

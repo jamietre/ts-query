@@ -4,9 +4,9 @@ import { WhereBuilder } from "./whereBuilder.js";
 import { OrderByBuilder } from "./orderByBuilder.js";
 import { LimitBuilder } from "./limitBuilder.js";
 import { AliasGenerator } from "./aliasGenerator.js";
-import type { Query, WhereCondition, Queryable, FieldsBase } from "./types/query.js";
+import type { Query, WhereCondition, Queryable, FieldsBase, FieldsWithStar } from "./types/query.js";
 import type { Join } from "./types/join.js";
-import type { Select } from "./types/select.js";
+import type { Select, FieldAliasMapping } from "./types/select.js";
 import type { Where } from "./types/where.js";
 import type { OrderBy, OrderDirection } from "./types/orderBy.js";
 import type { Limit } from "./types/limit.js";
@@ -20,14 +20,12 @@ export class QueryBuilder<T extends FieldsBase> implements Query<T> {
     this.tableName = options.tableName;
     this.tableAlias = options.tableAlias || this.aliasGenerator.generate();
   }
-  select(fields: Array<keyof T | Partial<Record<keyof T, string>>>): Select<T>;
-  select(fields: Partial<Record<keyof T, string>>): Select<T>;
-  select(subquery: Query<any>, alias?: string): Select<T>;
-  select(
-    fields: Array<keyof T | Partial<Record<keyof T, string>>> | Partial<Record<keyof T, string>> | Query<any>,
-    alias?: string,
-  ): Select<T> {
-    return new SelectBuilder<T>(this, fields);
+  select(fields: Array<FieldsWithStar<T> | Partial<Record<FieldsWithStar<T>, string>>>): Select<T>;
+  select(fields: Partial<Record<FieldsWithStar<T>, string>>): Select<T>;
+  select<R extends FieldsBase>(fields: FieldAliasMapping<T, R>): Select<R>;
+  select<R extends FieldsBase>(fields: Array<keyof T | FieldAliasMapping<T, R>>): Select<R>;
+  select(fields: any): any {
+    return new SelectBuilder(this, fields);
   }
 
   join<U extends FieldsBase>(tableName: string | Queryable<U>, tableAlias?: string): Join<T, U> {
