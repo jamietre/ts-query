@@ -1,5 +1,5 @@
 import { AliasGenerator } from "./aliasGenerator.js";
-import { CompoundQueryBuilder } from "./compoundQuery.js";
+import { CompoundQueryBuilder } from "./compoundQueryBuilder.js";
 import type { Query, QueryFieldsBase } from "./types/query.js";
 
 export type JoinType = "INNER" | "LEFT";

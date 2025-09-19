@@ -1,5 +1,5 @@
-import { SelectBuilder } from "./select.js";
-import { LimitBuilder } from "./limit.js";
+import { SelectBuilder } from "./selectBuilder.js";
+import { LimitBuilder } from "./limitBuilder.js";
 import type { Query, QueryFieldsBase } from "./types/query.js";
 import type { Select } from "./types/select.js";
 import type { OrderBy, OrderDirection } from "./types/orderBy.js";

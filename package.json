@@ -1,6 +1,6 @@
 {
   "name": "ts-query",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Type-safe SQL query builder with fluent API for TypeScript",
   "keywords": [
     "typescript",

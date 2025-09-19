@@ -16,7 +16,7 @@ describe("JOIN functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT game_id AS id, game_name AS name, description AS desc FROM games AS g INNER JOIN developers AS d ON g.game_id = d.game_id",
+      "SELECT id AS game_id, name AS game_name, desc AS description FROM games AS g INNER JOIN developers AS d ON g.game_id = d.game_id",
     );
   });
 
@@ -33,7 +33,7 @@ describe("JOIN functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT game_id AS id, game_name AS name, description AS desc FROM games AS g INNER JOIN developers AS d ON g.game_id = d.game_id",
+      "SELECT id AS game_id, name AS game_name, desc AS description FROM games AS g INNER JOIN developers AS d ON g.game_id = d.game_id",
     );
   });
 
@@ -47,7 +47,7 @@ describe("JOIN functionality", () => {
       });
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT game_id AS id FROM games AS g LEFT JOIN developers AS d ON g.game_id = d.game_id");
+    expect(sql).toBe("SELECT id AS game_id FROM games AS g LEFT JOIN developers AS d ON g.game_id = d.game_id");
   });
 
   it("should handle multiple INNER JOINs", () => {
@@ -66,7 +66,7 @@ describe("JOIN functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT game_id AS id, game_name AS name, description AS desc, publisher_name AS publisher FROM games AS g INNER JOIN developers AS d ON g.game_id = d.game_id INNER JOIN publishers AS p ON d.game_id = p.game_id",
+      "SELECT id AS game_id, name AS game_name, desc AS description, publisher AS publisher_name FROM games AS g INNER JOIN developers AS d ON g.game_id = d.game_id INNER JOIN publishers AS p ON d.game_id = p.game_id",
     );
   });
 
@@ -86,7 +86,7 @@ describe("JOIN functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT game_id AS id, game_name AS name, description AS desc, publisher_name AS publisher FROM games AS g INNER JOIN developers AS d ON g.game_id = d.game_id LEFT JOIN publishers AS p ON d.game_id = p.game_id",
+      "SELECT id AS game_id, name AS game_name, desc AS description, publisher AS publisher_name FROM games AS g INNER JOIN developers AS d ON g.game_id = d.game_id LEFT JOIN publishers AS p ON d.game_id = p.game_id",
     );
   });
 
@@ -104,7 +104,7 @@ describe("JOIN functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT game_id AS id, game_name AS name, description AS desc FROM games AS g INNER JOIN developers AS d ON g.game_id = d.game_id WHERE d.game_id = 1",
+      "SELECT id AS game_id, name AS game_name, desc AS description FROM games AS g INNER JOIN developers AS d ON g.game_id = d.game_id WHERE d.game_id = 1",
     );
   });
 
@@ -123,7 +123,7 @@ describe("JOIN functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT game_id AS id, game_name AS name, description AS desc FROM games AS g INNER JOIN developers AS d ON g.game_id = d.game_id WHERE (d.game_id = 1) OR (d.description LIKE '%indie%')",
+      "SELECT id AS game_id, name AS game_name, desc AS description FROM games AS g INNER JOIN developers AS d ON g.game_id = d.game_id WHERE (d.game_id = 1) OR (d.description LIKE '%indie%')",
     );
   });
 
@@ -160,7 +160,7 @@ describe("JOIN functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT game_id AS id, game_name AS name, description AS desc FROM games AS g LEFT JOIN game_developers AS gd ON g.game_id = gd.game_id",
+      "SELECT id AS game_id, name AS game_name, desc AS description FROM games AS g LEFT JOIN game_developers AS gd ON g.game_id = gd.game_id",
     );
   });
 
@@ -181,7 +181,7 @@ describe("JOIN functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT game_id AS id, game_name AS name, platform_name AS platform FROM games AS g LEFT JOIN developers AS d ON g.game_id = d.game_id LEFT JOIN publishers AS p ON d.game_id = p.game_id LEFT JOIN platforms AS pl ON p.game_id = pl.game_id",
+      "SELECT id AS game_id, name AS game_name, platform AS platform_name FROM games AS g LEFT JOIN developers AS d ON g.game_id = d.game_id LEFT JOIN publishers AS p ON d.game_id = p.game_id LEFT JOIN platforms AS pl ON p.game_id = pl.game_id",
     );
   });
 });

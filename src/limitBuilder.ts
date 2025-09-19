@@ -1,4 +1,4 @@
-import { SelectBuilder } from "./select.js";
+import { SelectBuilder } from "./selectBuilder.js";
 import type { Query, QueryFieldsBase } from "./types/query.js";
 import type { Select } from "./types/select.js";
 import type { Limit } from "./types/limit.js";
