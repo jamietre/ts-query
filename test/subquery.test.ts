@@ -30,7 +30,7 @@ describe("Subquery functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT game_id, game_name FROM games AS g LEFT JOIN (SELECT * FROM recent_games AS rg WHERE rg.release_year > 2020) AS t1 ON g.game_id = t1.game_id WHERE t1.game_id = 1",
+      "SELECT g.game_id, g.game_name FROM games AS g LEFT JOIN (SELECT * FROM recent_games AS rg WHERE rg.release_year > 2020) AS t1 ON g.game_id = t1.game_id WHERE g.game_id = 1",
     );
   });
 
@@ -59,7 +59,7 @@ describe("Subquery functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT game_id, game_name FROM (SELECT * FROM games AS g INNER JOIN developers AS d ON g.game_id = d.game_id WHERE d.game_id = 1) AS game_with_dev",
+      "SELECT game_id, game_name FROM (SELECT * FROM games AS g INNER JOIN developers AS d ON g.game_id = d.game_id WHERE g.game_id = 1) AS game_with_dev",
     );
   });
 

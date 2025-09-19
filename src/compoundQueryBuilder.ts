@@ -12,20 +12,28 @@ import type { Where } from "./types/where.js";
 import type { OrderBy, OrderDirection } from "./types/orderBy.js";
 import type { Limit } from "./types/limit.js";
 
+type FieldMap<T> = {
+  [k: string]: keyof T;
+};
+
 export class CompoundQueryBuilder<T extends FieldsBase, U extends FieldsBase> implements Query<T & U> {
   readonly query1: Query<T>;
   readonly query2: Query<U>;
   readonly joinInfo: JoinBuilder<T, U>;
+  readonly joinFieldMapping?: FieldMap<U>; // Store field mappings from join.select()
   private aliasGenerator: AliasGenerator;
+
   constructor(options: {
     query1: Query<T>;
     query2: Query<U>;
     join: JoinBuilder<T, U>;
     aliasGenerator: AliasGenerator;
+    joinFieldMapping?: FieldMap<U>;
   }) {
     this.query1 = options.query1;
     this.query2 = options.query2;
     this.joinInfo = options.join;
+    this.joinFieldMapping = options.joinFieldMapping;
     this.aliasGenerator = options.aliasGenerator;
   }
   select(fields: Array<keyof T & U>): Select<T & U>;

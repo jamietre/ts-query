@@ -26,3 +26,18 @@ export type ComplexJoinFields = {
   developer_id: number;
   description: string;
 } & TableFieldsBase;
+
+// Types with conflicting field names for testing aliasFields
+export type GameFields = {
+  id: number;
+  name: string;
+  release_year: number;
+  created_at: string;
+} & TableFieldsBase;
+
+export type DeveloperFields = {
+  id: number;
+  name: string; // Conflict with GameFields.name
+  founded_year: number;
+  created_at: string; // Conflict with GameFields.created_at
+} & TableFieldsBase;

@@ -23,7 +23,7 @@ describe("Automatic alias generation", () => {
 
     const sql = query.toString();
     expect(sql).toMatch(
-      /SELECT id AS game_id, name AS game_name, desc AS description FROM games AS t\d+ LEFT JOIN developers AS t\d+ ON t\d+\.game_id = t\d+\.game_id/,
+      /SELECT t\d+\.id AS game_id, t\d+\.name AS game_name, t\d+\.desc AS description FROM games AS t\d+ LEFT JOIN developers AS t\d+ ON t\d+\.game_id = t\d+\.game_id/,
     );
   });
 
@@ -48,7 +48,7 @@ describe("Automatic alias generation", () => {
 
     const sql = query.toString();
     expect(sql).toMatch(
-      /SELECT id AS game_id, name AS game_name FROM games AS g LEFT JOIN developers AS t\d+ ON g\.game_id = t\d+\.game_id/,
+      /SELECT g\.id AS game_id, g\.name AS game_name FROM games AS g LEFT JOIN developers AS t\d+ ON g\.game_id = t\d+\.game_id/,
     );
   });
 
@@ -68,7 +68,7 @@ describe("Automatic alias generation", () => {
 
     const sql = query.toString();
     expect(sql).toMatch(
-      /SELECT id AS game_id, name AS game_name, desc AS description, publisher AS publisher_name FROM games AS t\d+ INNER JOIN developers AS t\d+ ON t\d+\.game_id = t\d+\.game_id LEFT JOIN publishers AS t\d+ ON t\d+\.game_id = t\d+\.game_id/,
+      /SELECT t\d+\.id AS game_id, t\d+\.name AS game_name, t\d+\.desc AS description, t\d+\.publisher AS publisher_name FROM games AS t\d+ INNER JOIN developers AS t\d+ ON t\d+\.game_id = t\d+\.game_id LEFT JOIN publishers AS t\d+ ON t\d+\.game_id = t\d+\.game_id/,
     );
   });
 

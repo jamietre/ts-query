@@ -10,8 +10,16 @@ interface Select<T extends FieldsBase> extends Queryable<T> {
 }
 
 type JoinType = "INNER" | "LEFT";
+type FieldMap<T> = {
+    [k: string]: keyof T;
+};
 interface Join<T extends FieldsBase, U extends FieldsBase> {
+    alias(fields: Array<keyof U>): JoinWithFields<T, U, U>;
+    alias<V extends FieldMap<U>>(fields: V): JoinWithFields<T, U, V>;
     on(condition: Partial<Record<keyof T, keyof U>>): Query<T & U>;
+}
+interface JoinWithFields<TMain extends FieldsBase, TJoined extends FieldsBase, TMapped extends FieldsBase = TJoined> {
+    on(condition: Partial<Record<keyof TMain, keyof TJoined>>): Query<TMain & TMapped>;
 }
 
 interface Limit<T extends FieldsBase> extends Select<T> {
@@ -58,13 +66,13 @@ interface Where<T extends FieldsBase> extends Query<T>, Queryable<T> {
 }
 
 type FieldsBase = {};
-type FieldsWithStar<T extends FieldsBase> = keyof T | "*";
-interface Queryable<T extends FieldsBase> {
+type FieldsWithStar<T> = keyof T | "*";
+interface Queryable<T = never> {
     toString(): string;
 }
 type AnyQueryable<T extends FieldsBase> = Limit<T> | Where<T> | OrderBy<T> | Select<T> | Join<any, T> | Query<T>;
 interface Query<T extends FieldsBase> extends Select<T>, Queryable<T> {
-    join<U extends FieldsBase>(tableName: string, tableAlias?: string): Join<T, U>;
+    join<U extends FieldsBase = never>(tableName: string, tableAlias?: string): Join<T, U>;
     innerJoin<U extends FieldsBase>(tableName: string, tableAlias?: string): Join<T, U>;
     leftJoin<U extends FieldsBase>(tableName: string, tableAlias?: string): Join<T, U>;
     join<U extends FieldsBase>(subquery: AnyQueryable<U>, alias?: string): Join<T, U>;

@@ -170,10 +170,51 @@ export class SelectBuilder<T extends FieldsBase> implements Select<T> {
     return "";
   }
 
-  private getTableAliasForField(query: Queryable<any>, _field: string): string {
-    // For now, just get the rightmost alias - in a more sophisticated implementation,
-    // you might want to track which table each field belongs to
-    return this.getRightmostTableAlias(query);
+  private getTableAliasForField(query: Queryable<any>, fieldAlias: string): string {
+    if (query instanceof CompoundQueryBuilder && query.joinFieldMapping) {
+      // Check if this alias exists in the join field mapping (from joined table)
+      if (fieldAlias in query.joinFieldMapping) {
+        // This alias maps to a field in the joined table
+        return this.getRightmostTableAlias(query);
+      }
+
+      // If alias not found in join mapping, assume it's from the leftmost (base) table
+      return this.getLeftmostTableAlias(query);
+    }
+
+    // Default: use the leftmost (base) table alias
+    return this.getLeftmostTableAlias(query);
+  }
+
+  private getLeftmostTableAlias(query: Queryable<any>): string {
+    if (query instanceof QueryBuilder) {
+      return query.tableAlias;
+    } else if (query instanceof CompoundQueryBuilder) {
+      // For compound queries, get the leftmost table alias (the base table)
+      return this.getLeftmostTableAlias(query.query1);
+    } else if (query instanceof WhereBuilder) {
+      return this.getLeftmostTableAlias(query.query);
+    } else if (query instanceof LimitBuilder) {
+      return this.getLeftmostTableAlias(query.query);
+    } else if (query instanceof OrderByBuilder) {
+      return this.getLeftmostTableAlias(query.query);
+    }
+    return "";
+  }
+
+  private queryHasJoins(query: Queryable<any>): boolean {
+    if (query instanceof QueryBuilder) {
+      return false; // Single table, no joins
+    } else if (query instanceof CompoundQueryBuilder) {
+      return true; // CompoundQueryBuilder indicates a join
+    } else if (query instanceof WhereBuilder) {
+      return this.queryHasJoins(query.query);
+    } else if (query instanceof LimitBuilder) {
+      return this.queryHasJoins(query.query);
+    } else if (query instanceof OrderByBuilder) {
+      return this.queryHasJoins(query.query);
+    }
+    return false;
   }
 
   private getLimitClause(query: Queryable<any>): string {
@@ -212,12 +253,35 @@ export class SelectBuilder<T extends FieldsBase> implements Select<T> {
   toString() {
     // Handle regular field selection
     // When it's mapped from { key: value } the actual output name (the alias) is the key
+    const hasJoins = this.queryHasJoins(this.query);
+
     const fields = Object.entries(this.fields)
       .map(([alias, column]) => {
-        if (alias === column) {
-          return alias;
+        // Handle "*" case - don't add table aliases
+        if (column === "*") {
+          return "*";
         }
-        return `${column} AS ${alias}`;
+
+        // Check if this is a mapped field from join field mapping
+        let actualField = column;
+        if (hasJoins && this.query instanceof CompoundQueryBuilder && this.query.joinFieldMapping) {
+          // If the alias exists in the field mapping, use the mapped field name
+          if (alias in this.query.joinFieldMapping) {
+            actualField = String(this.query.joinFieldMapping[alias]);
+          }
+        }
+
+        // Only add table aliases if there are joins
+        let fullColumnName = actualField;
+        if (hasJoins) {
+          const tableAlias = this.getTableAliasForField(this.query, alias);
+          fullColumnName = tableAlias ? `${tableAlias}.${actualField}` : actualField;
+        }
+
+        if (alias === actualField) {
+          return fullColumnName;
+        }
+        return `${fullColumnName} AS ${alias}`;
       })
       .join(", ");
     const source = this.getSource(this.query);

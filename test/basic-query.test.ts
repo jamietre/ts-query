@@ -81,7 +81,7 @@ describe("Basic Query Functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT id AS game_id, name AS game_name, desc AS description, publisher AS publisher_name FROM games AS g LEFT JOIN developers AS d ON g.game_id = d.game_id LEFT JOIN publishers AS p ON d.game_id = p.game_id",
+      "SELECT g.id AS game_id, g.name AS game_name, g.desc AS description, g.publisher AS publisher_name FROM games AS g LEFT JOIN developers AS d ON g.game_id = d.game_id LEFT JOIN publishers AS p ON d.game_id = p.game_id",
     );
   });
 
@@ -95,6 +95,6 @@ describe("Basic Query Functionality", () => {
       });
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT id AS game_id FROM games AS g LEFT JOIN developers AS d ON g.game_id = d.game_id");
+    expect(sql).toBe("SELECT g.id AS game_id FROM games AS g LEFT JOIN developers AS d ON g.game_id = d.game_id");
   });
 });
