@@ -1,11 +1,9 @@
-import { CompoundQueryBuilder } from "./compoundQuery.js";
-import { QueryBuilder } from "./query.js";
-import { WhereBuilder } from "./where.js";
-import { LimitBuilder } from "./limit.js";
-import { OrderByBuilder } from "./orderBy.js";
-import type { Query, Queryable, QueryFieldsBase } from "./types/query.js";
-import type { Limit } from "./types/limit.js";
-import type { OrderBy } from "./types/orderBy.js";
+import { CompoundQueryBuilder } from "./compoundQueryBuilder.js";
+import { QueryBuilder } from "./queryBuilder.js";
+import { WhereBuilder } from "./whereBuilder.js";
+import { LimitBuilder } from "./limitBuilder.js";
+import { OrderByBuilder } from "./orderByBuilder.js";
+import type { Queryable, QueryFieldsBase } from "./types/query.js";
 import type { Select } from "./types/select.js";
 export class SelectBuilder<T extends QueryFieldsBase> implements Select<T> {
   query: Queryable<T>;
@@ -208,59 +206,13 @@ export class SelectBuilder<T extends QueryFieldsBase> implements Select<T> {
     return String(value);
   }
 
-  private generateSubquerySQL(query: Queryable<any>): string {
-    // Generate a basic SELECT * from the subquery to get its full SQL
-    if (query instanceof QueryBuilder) {
-      return `SELECT * FROM ${query.tableName} AS ${query.tableAlias}`;
-    } else if (query instanceof CompoundQueryBuilder) {
-      const source = this.getSource(query);
-      return `SELECT * FROM ${source}`;
-    } else if (query instanceof WhereBuilder) {
-      const source = this.getSource(query.query);
-      const whereClause = this.getWhereClause(query);
-      let sql = `SELECT * FROM ${source}`;
-      if (whereClause) {
-        sql += ` WHERE ${whereClause}`;
-      }
-      return sql;
-    } else if (query instanceof LimitBuilder) {
-      const source = this.getSource(query.query);
-      const whereClause = this.getWhereClause(query.query);
-      const limitClause = this.getLimitClause(query);
-      let sql = `SELECT * FROM ${source}`;
-      if (whereClause) {
-        sql += ` WHERE ${whereClause}`;
-      }
-      if (limitClause) {
-        sql += ` ${limitClause}`;
-      }
-      return sql;
-    } else if (query instanceof OrderByBuilder) {
-      const source = this.getSource(query.query);
-      const whereClause = this.getWhereClause(query.query);
-      const orderByClause = this.getOrderByClause(query);
-      const limitClause = this.getLimitClause(query.query);
-      let sql = `SELECT * FROM ${source}`;
-      if (whereClause) {
-        sql += ` WHERE ${whereClause}`;
-      }
-      if (orderByClause) {
-        sql += ` ${orderByClause}`;
-      }
-      if (limitClause) {
-        sql += ` ${limitClause}`;
-      }
-      return sql;
-    }
-    return "SELECT *";
-  }
-
   toString() {
     // Handle regular field selection
+    // When it's mapped from { key: value } the actual output name (the alias) is the key
     const fields = Object.entries(this.fields)
-      .map(([column, alias]) => {
-        if (column === alias) {
-          return column;
+      .map(([alias, column]) => {
+        if (alias === column) {
+          return alias;
         }
         return `${column} AS ${alias}`;
       })

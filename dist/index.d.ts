@@ -73,13 +73,14 @@ interface Query<T extends QueryFieldsBase> extends Select<T>, Queryable<T> {
     leftJoin<U extends QueryFieldsBase>(subquery: AnyQueryable<U>, alias?: string): Join<T, U>;
     where(conditions: WhereCondition<T>): Where<T>;
     orderBy(field: keyof T, direction?: OrderDirection): OrderBy<T>;
+    limit(count: number, offset?: number): Limit<T>;
 }
 type WhereCondition<T extends QueryFieldsBase> = Condition<T> & {
     or?: Array<Condition<T>>;
 };
 
-declare function from<T extends QueryFieldsBase>(tableName: string, alias?: string): Query<T>;
-declare function from<T extends QueryFieldsBase>(subquery: AnyQueryable<T>, alias2?: string): Query<T>;
+declare function from<T extends QueryFieldsBase>(tableName: string, tableAlias?: string): Query<T>;
+declare function from<T extends QueryFieldsBase>(subquery: AnyQueryable<T>, tableAlias?: string): Query<T>;
 declare const queryBuilder: {
     from: typeof from;
 };

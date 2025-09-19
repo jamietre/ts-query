@@ -1,9 +1,9 @@
-import { QueryBuilder } from "./query.js";
-import { JoinBuilder } from "./join.js";
-import { SelectBuilder } from "./select.js";
-import { WhereBuilder } from "./where.js";
-import { OrderByBuilder } from "./orderBy.js";
-import { LimitBuilder } from "./limit.js";
+import { QueryBuilder } from "./queryBuilder.js";
+import { JoinBuilder } from "./joinBuilder.js";
+import { SelectBuilder } from "./selectBuilder.js";
+import { WhereBuilder } from "./whereBuilder.js";
+import { OrderByBuilder } from "./orderByBuilder.js";
+import { LimitBuilder } from "./limitBuilder.js";
 import { AliasGenerator } from "./aliasGenerator.js";
 import type { Query, WhereCondition, Queryable, QueryFieldsBase } from "./types/query.js";
 import type { Join } from "./types/join.js";

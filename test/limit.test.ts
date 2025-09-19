@@ -68,7 +68,7 @@ describe("LIMIT functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT game_id AS id, game_name AS name, description AS desc FROM games AS g LEFT JOIN developers AS d ON g.game_id = d.game_id WHERE d.game_id < 100 LIMIT 10",
+      "SELECT id AS game_id, name AS game_name, desc AS description FROM games AS g LEFT JOIN developers AS d ON g.game_id = d.game_id WHERE d.game_id < 100 LIMIT 10",
     );
   });
 
@@ -113,7 +113,7 @@ describe("LIMIT functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT game_id AS id, game_name AS title, release_year AS year FROM games AS g WHERE g.release_year >= 2010 LIMIT 15",
+      "SELECT id AS game_id, title AS game_name, year AS release_year FROM games AS g WHERE g.release_year >= 2010 LIMIT 15",
     );
   });
 
@@ -126,7 +126,7 @@ describe("LIMIT functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT game_id, game_name AS title, release_year FROM games AS g WHERE g.game_id IN (1, 2, 3, 4, 5) LIMIT 3",
+      "SELECT game_id, title AS game_name, release_year FROM games AS g WHERE g.game_id IN (1, 2, 3, 4, 5) LIMIT 3",
     );
   });
 

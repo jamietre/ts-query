@@ -1,6 +1,6 @@
 // Main entry point for ts-query package
 import { AliasGenerator } from "./aliasGenerator.js";
-import { QueryBuilder } from "./query.js";
+import { QueryBuilder } from "./queryBuilder.js";
 import type { AnyQueryable, Query, Queryable, QueryFieldsBase } from "./types/query.js";
 
 // Create proper overloaded from function

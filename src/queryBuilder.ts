@@ -1,8 +1,8 @@
-import { JoinBuilder } from "./join.js";
-import { SelectBuilder } from "./select.js";
-import { WhereBuilder } from "./where.js";
-import { OrderByBuilder } from "./orderBy.js";
-import { LimitBuilder } from "./limit.js";
+import { JoinBuilder } from "./joinBuilder.js";
+import { SelectBuilder } from "./selectBuilder.js";
+import { WhereBuilder } from "./whereBuilder.js";
+import { OrderByBuilder } from "./orderByBuilder.js";
+import { LimitBuilder } from "./limitBuilder.js";
 import { AliasGenerator } from "./aliasGenerator.js";
 import type { Query, WhereCondition, Queryable, QueryFieldsBase } from "./types/query.js";
 import type { Join } from "./types/join.js";
@@ -10,7 +10,6 @@ import type { Select } from "./types/select.js";
 import type { Where } from "./types/where.js";
 import type { OrderBy, OrderDirection } from "./types/orderBy.js";
 import type { Limit } from "./types/limit.js";
-import { A } from "vitest/dist/chunks/environment.d.cL3nLXbE.js";
 
 export class QueryBuilder<T extends QueryFieldsBase> implements Query<T> {
   readonly tableName: string;

@@ -64,7 +64,7 @@ describe("WHERE functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT game_id AS id, game_name AS name, description AS desc FROM games AS g LEFT JOIN developers AS d ON g.game_id = d.game_id WHERE d.game_id = 1",
+      "SELECT id AS game_id, name AS game_name, desc AS description FROM games AS g LEFT JOIN developers AS d ON g.game_id = d.game_id WHERE d.game_id = 1",
     );
   });
 
@@ -267,7 +267,7 @@ describe("WHERE functionality", () => {
 
       const sql = query.toString();
       expect(sql).toBe(
-        "SELECT game_id AS id, game_name AS name, description AS desc FROM games AS g LEFT JOIN developers AS d ON g.game_id = d.game_id WHERE (d.game_id = 1) OR (d.description LIKE '%action%')",
+        "SELECT id AS game_id, name AS game_name, desc AS description FROM games AS g LEFT JOIN developers AS d ON g.game_id = d.game_id WHERE (d.game_id = 1) OR (d.description LIKE '%action%')",
       );
     });
 
@@ -366,7 +366,7 @@ describe("WHERE functionality", () => {
 
       const sql = query.toString();
       expect(sql).toBe(
-        "SELECT game_id AS id, game_name AS name, description AS desc FROM games AS g LEFT JOIN developers AS d ON g.game_id = d.game_id WHERE (d.game_id = 1) OR (d.description LIKE '%action%')",
+        "SELECT id AS game_id, name AS game_name, desc AS description FROM games AS g LEFT JOIN developers AS d ON g.game_id = d.game_id WHERE (d.game_id = 1) OR (d.description LIKE '%action%')",
       );
     });
   });

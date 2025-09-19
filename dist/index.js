@@ -1,21 +1,29 @@
 class AliasGenerator {
-    static generate() {
+    constructor() {
+        this.counter = 0;
+    }
+    generate() {
         return `t${++this.counter}`;
     }
-    static reset() {
+    reset() {
         this.counter = 0;
     }
 }
-AliasGenerator.counter = 0;
 
 class LimitBuilder {
-    constructor(query, limit, offset) {
-        this.query = query;
-        this.limitValue = limit;
-        this.offsetValue = offset;
+    constructor(options) {
+        this.query = options.query;
+        this.limitValue = options.limit;
+        this.offsetValue = options.offset;
+        this.aliasGenerator = options.aliasGenerator;
     }
     offset(offsetValue) {
-        return new LimitBuilder(this.query, this.limitValue, offsetValue);
+        return new LimitBuilder({
+            query: this.query,
+            limit: this.limitValue,
+            offset: offsetValue,
+            aliasGenerator: this.aliasGenerator,
+        });
     }
     select(fields) {
         return new SelectBuilder(this, fields);
@@ -26,14 +34,20 @@ class LimitBuilder {
 }
 
 class OrderByBuilder {
-    constructor(query, field, direction = 'ASC') {
+    constructor(options) {
         this.orderFields = [];
-        this.query = query;
-        this.orderFields = [{ field, direction }];
+        this.query = options.query;
+        this.orderFields = [{ field: options.field, direction: options.direction }];
+        this.aliasGenerator = options.aliasGenerator;
     }
-    orderBy(field, direction = 'ASC') {
+    orderBy(field, direction = "ASC") {
         const newOrderFields = [...this.orderFields, { field, direction }];
-        const newOrderBy = new OrderByBuilder(this.query, field, direction);
+        const newOrderBy = new OrderByBuilder({
+            query: this.query,
+            field,
+            direction,
+            aliasGenerator: this.aliasGenerator,
+        });
         newOrderBy.orderFields = newOrderFields;
         return newOrderBy;
     }
@@ -41,7 +55,7 @@ class OrderByBuilder {
         return new SelectBuilder(this, fields);
     }
     limit(count, offset) {
-        return new LimitBuilder(this.query, count, offset);
+        return new LimitBuilder({ query: this.query, limit: count, offset, aliasGenerator: this.aliasGenerator });
     }
     toString() {
         return this.select(["*"]).toString();
@@ -49,24 +63,29 @@ class OrderByBuilder {
 }
 
 class WhereBuilder {
-    constructor(query, conditions, orConditions = []) {
+    constructor(options) {
         this.orConditions = [];
-        this.query = query;
-        this.conditions = conditions;
-        this.orConditions = orConditions;
+        this.query = options.query;
+        this.conditions = options.conditions;
+        this.orConditions = options.orConditions;
+        this.aliasGenerator = options.aliasGenerator;
     }
     select(fields, alias) {
         return new SelectBuilder(this, fields);
     }
-    join(entity, alias) {
-        if (typeof entity === "string") {
-            const newQuery = new QueryBuilder(entity, alias || AliasGenerator.generate());
-            return new JoinBuilder(this, newQuery, "INNER");
+    join(tableName, tableAlias) {
+        if (typeof tableName === "string") {
+            const newQuery = new QueryBuilder({ tableName, tableAlias, aliasGenerator: this.aliasGenerator });
+            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "INNER" });
         }
         else {
             // Handle subquery case - create a QueryBuilder that wraps the subquery
-            const newQuery = new QueryBuilder(`(${entity.toString()})`, alias || AliasGenerator.generate());
-            return new JoinBuilder(this, newQuery, "INNER");
+            const newQuery = new QueryBuilder({
+                tableName: `(${tableName.toString()})`,
+                tableAlias,
+                aliasGenerator: this.aliasGenerator,
+            });
+            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "INNER" });
         }
     }
     innerJoin(entity, alias) {
@@ -74,19 +93,37 @@ class WhereBuilder {
     }
     leftJoin(entity, alias) {
         if (typeof entity === "string") {
-            const newQuery = new QueryBuilder(entity, alias || AliasGenerator.generate());
-            return new JoinBuilder(this, newQuery, "LEFT");
+            const newQuery = new QueryBuilder({
+                tableName: entity,
+                tableAlias: alias || new AliasGenerator().generate(),
+                aliasGenerator: this.aliasGenerator,
+            });
+            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "LEFT" });
         }
         else {
             // Handle subquery case - create a QueryBuilder that wraps the subquery
-            const newQuery = new QueryBuilder(`(${entity.toString()})`, alias || AliasGenerator.generate());
-            return new JoinBuilder(this, newQuery, "LEFT");
+            const newQuery = new QueryBuilder({
+                tableName: `(${entity.toString()})`,
+                tableAlias: alias || new AliasGenerator().generate(),
+                aliasGenerator: this.aliasGenerator,
+            });
+            return new JoinBuilder({
+                query1: this,
+                query2: newQuery,
+                joinType: "LEFT",
+                aliasGenerator: this.aliasGenerator,
+            });
         }
     }
     where(conditions) {
         // Merge conditions (simple approach - in real implementation might want more sophisticated merging)
         const mergedConditions = { ...this.conditions, ...conditions };
-        return new WhereBuilder(this.query, mergedConditions, this.orConditions);
+        return new WhereBuilder({
+            query: this.query,
+            conditions: mergedConditions,
+            orConditions: this.orConditions,
+            aliasGenerator: this.aliasGenerator,
+        });
     }
     or(conditions) {
         const orCondition = {
@@ -94,13 +131,18 @@ class WhereBuilder {
             conditions,
         };
         const newOrConditions = [...this.orConditions, orCondition];
-        return new WhereBuilder(this.query, this.conditions, newOrConditions);
+        return new WhereBuilder({
+            query: this.query,
+            conditions: this.conditions,
+            orConditions: newOrConditions,
+            aliasGenerator: this.aliasGenerator,
+        });
     }
     orderBy(field, direction = "ASC") {
-        return new OrderByBuilder(this, field, direction);
+        return new OrderByBuilder({ query: this, field, direction, aliasGenerator: this.aliasGenerator });
     }
     limit(count, offset) {
-        return new LimitBuilder(this, count, offset);
+        return new LimitBuilder({ query: this, limit: count, offset, aliasGenerator: this.aliasGenerator });
     }
     toString() {
         return this.select(["*"]).toString();
@@ -299,62 +341,13 @@ class SelectBuilder {
         }
         return String(value);
     }
-    generateSubquerySQL(query) {
-        // Generate a basic SELECT * from the subquery to get its full SQL
-        if (query instanceof QueryBuilder) {
-            return `SELECT * FROM ${query.tableName} AS ${query.tableAlias}`;
-        }
-        else if (query instanceof CompoundQueryBuilder) {
-            const source = this.getSource(query);
-            return `SELECT * FROM ${source}`;
-        }
-        else if (query instanceof WhereBuilder) {
-            const source = this.getSource(query.query);
-            const whereClause = this.getWhereClause(query);
-            let sql = `SELECT * FROM ${source}`;
-            if (whereClause) {
-                sql += ` WHERE ${whereClause}`;
-            }
-            return sql;
-        }
-        else if (query instanceof LimitBuilder) {
-            const source = this.getSource(query.query);
-            const whereClause = this.getWhereClause(query.query);
-            const limitClause = this.getLimitClause(query);
-            let sql = `SELECT * FROM ${source}`;
-            if (whereClause) {
-                sql += ` WHERE ${whereClause}`;
-            }
-            if (limitClause) {
-                sql += ` ${limitClause}`;
-            }
-            return sql;
-        }
-        else if (query instanceof OrderByBuilder) {
-            const source = this.getSource(query.query);
-            const whereClause = this.getWhereClause(query.query);
-            const orderByClause = this.getOrderByClause(query);
-            const limitClause = this.getLimitClause(query.query);
-            let sql = `SELECT * FROM ${source}`;
-            if (whereClause) {
-                sql += ` WHERE ${whereClause}`;
-            }
-            if (orderByClause) {
-                sql += ` ${orderByClause}`;
-            }
-            if (limitClause) {
-                sql += ` ${limitClause}`;
-            }
-            return sql;
-        }
-        return "SELECT *";
-    }
     toString() {
         // Handle regular field selection
+        // When it's mapped from { key: value } the actual output name (the alias) is the key
         const fields = Object.entries(this.fields)
-            .map(([column, alias]) => {
-            if (column === alias) {
-                return column;
+            .map(([alias, column]) => {
+            if (alias === column) {
+                return alias;
             }
             return `${column} AS ${alias}`;
         })
@@ -378,44 +371,55 @@ class SelectBuilder {
 }
 
 class CompoundQueryBuilder {
-    constructor(query1, query2, join) {
-        this.query1 = query1;
-        this.query2 = query2;
-        this.joinInfo = join;
+    constructor(options) {
+        this.query1 = options.query1;
+        this.query2 = options.query2;
+        this.joinInfo = options.join;
+        this.aliasGenerator = options.aliasGenerator;
     }
     select(fields) {
         return new SelectBuilder(this, fields);
     }
-    join(entity, alias) {
-        if (typeof entity === 'string') {
-            const newQuery = new QueryBuilder(entity, alias || AliasGenerator.generate());
-            return new JoinBuilder(this, newQuery, 'INNER');
+    join(tableName, tableAlias) {
+        if (typeof tableName === "string") {
+            const newQuery = new QueryBuilder({ tableName, tableAlias, aliasGenerator: this.aliasGenerator });
+            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "INNER" });
         }
         else {
             // Handle subquery case - create a QueryBuilder that wraps the subquery
-            const newQuery = new QueryBuilder(`(${entity.toString()})`, alias || AliasGenerator.generate());
-            return new JoinBuilder(this, newQuery, 'INNER');
+            const newQuery = new QueryBuilder({
+                tableName: `(${tableName.toString()})`,
+                aliasGenerator: this.aliasGenerator,
+            });
+            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "INNER" });
         }
     }
-    innerJoin(entity, alias) {
-        return this.join(entity, alias);
+    innerJoin(tableName, tableAlias) {
+        return this.join(tableName, tableAlias);
     }
-    leftJoin(entity, alias) {
-        if (typeof entity === 'string') {
-            const newQuery = new QueryBuilder(entity, alias || AliasGenerator.generate());
-            return new JoinBuilder(this, newQuery, 'LEFT');
+    leftJoin(tableName, tableAlias) {
+        if (typeof tableName === "string") {
+            const newQuery = new QueryBuilder({ tableName, tableAlias, aliasGenerator: this.aliasGenerator });
+            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "LEFT" });
         }
         else {
             // Handle subquery case - create a QueryBuilder that wraps the subquery
-            const newQuery = new QueryBuilder(`(${entity.toString()})`, alias || AliasGenerator.generate());
-            return new JoinBuilder(this, newQuery, 'LEFT');
+            const newQuery = new QueryBuilder({
+                tableName: `(${tableName.toString()})`,
+                tableAlias: tableAlias,
+                aliasGenerator: this.aliasGenerator,
+            });
+            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "LEFT" });
         }
     }
     where(conditions) {
-        return new WhereBuilder(this, conditions);
+        return new WhereBuilder({ query: this, conditions, orConditions: [], aliasGenerator: this.aliasGenerator });
     }
-    orderBy(field, direction = 'ASC') {
-        return new OrderByBuilder(this, field, direction);
+    orderBy(field, direction = "ASC") {
+        return new OrderByBuilder({ query: this, field, direction, aliasGenerator: this.aliasGenerator });
+    }
+    limit(count, offset) {
+        return new LimitBuilder({ query: this, limit: count, offset, aliasGenerator: this.aliasGenerator });
     }
     toString() {
         return this.select(["*"]).toString();
@@ -423,55 +427,72 @@ class CompoundQueryBuilder {
 }
 
 class JoinBuilder {
-    constructor(query1, query2, joinType = 'LEFT') {
-        this.query1 = query1;
-        this.query2 = query2;
-        this.joinType = joinType;
+    constructor(options) {
+        this.aliasGenerator = new AliasGenerator();
+        this.query1 = options.query1;
+        this.query2 = options.query2;
+        this.joinType = options.joinType;
+        this.aliasGenerator = options.aliasGenerator || new AliasGenerator();
     }
     on(condition) {
         this.condition = condition;
-        return new CompoundQueryBuilder(this.query1, this.query2, this);
+        return new CompoundQueryBuilder({
+            query1: this.query1,
+            query2: this.query2,
+            join: this,
+            aliasGenerator: this.aliasGenerator,
+        });
     }
 }
 
 class QueryBuilder {
-    constructor(tableName, tableAlias) {
-        this.tableName = tableName;
-        this.tableAlias = tableAlias || AliasGenerator.generate();
+    constructor(options) {
+        this.aliasGenerator = options.aliasGenerator;
+        this.tableName = options.tableName;
+        this.tableAlias = options.tableAlias || this.aliasGenerator.generate();
     }
     select(fields, alias) {
         return new SelectBuilder(this, fields);
     }
-    join(entity, alias) {
-        if (typeof entity === 'string') {
-            const newQuery = new QueryBuilder(entity, alias || AliasGenerator.generate());
-            return new JoinBuilder(this, newQuery, "INNER");
+    join(tableName, tableAlias) {
+        if (typeof tableName === "string") {
+            const newQuery = new QueryBuilder({ tableName, tableAlias, aliasGenerator: this.aliasGenerator });
+            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "INNER" });
         }
         else {
             // Handle subquery case - create a QueryBuilder that wraps the subquery
-            const newQuery = new QueryBuilder(`(${entity.toString()})`, alias || AliasGenerator.generate());
-            return new JoinBuilder(this, newQuery, "INNER");
+            const newQuery = new QueryBuilder({
+                tableName: `(${tableName.toString()})`,
+                aliasGenerator: this.aliasGenerator,
+            });
+            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "INNER" });
         }
     }
     innerJoin(entity, alias) {
         return this.join(entity, alias);
     }
-    leftJoin(entity, alias) {
-        if (typeof entity === 'string') {
-            const newQuery = new QueryBuilder(entity, alias || AliasGenerator.generate());
-            return new JoinBuilder(this, newQuery, "LEFT");
+    leftJoin(tableName, tableAlias) {
+        if (typeof tableName === "string") {
+            const newQuery = new QueryBuilder({ tableName, tableAlias, aliasGenerator: this.aliasGenerator });
+            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "LEFT" });
         }
         else {
             // Handle subquery case - create a QueryBuilder that wraps the subquery
-            const newQuery = new QueryBuilder(`(${entity.toString()})`, alias || AliasGenerator.generate());
-            return new JoinBuilder(this, newQuery, "LEFT");
+            const newQuery = new QueryBuilder({
+                tableName: `(${tableName.toString()})`,
+                aliasGenerator: this.aliasGenerator,
+            });
+            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "LEFT" });
         }
     }
     where(conditions) {
-        return new WhereBuilder(this, conditions);
+        return new WhereBuilder({ query: this, conditions, orConditions: [], aliasGenerator: this.aliasGenerator });
     }
     orderBy(field, direction = "ASC") {
-        return new OrderByBuilder(this, field, direction);
+        return new OrderByBuilder({ query: this, field, direction, aliasGenerator: this.aliasGenerator });
+    }
+    limit(count, offset) {
+        return new LimitBuilder({ query: this, limit: count, offset, aliasGenerator: this.aliasGenerator });
     }
     toString() {
         return this.select(["*"]).toString();
@@ -479,13 +500,17 @@ class QueryBuilder {
 }
 
 // Main entry point for ts-query package
-function from(entity, alias) {
-    if (typeof entity === "string") {
-        return new QueryBuilder(entity, alias || AliasGenerator.generate());
+function from(tableName, tableAlias) {
+    if (typeof tableName === "string") {
+        return new QueryBuilder({ tableName, tableAlias, aliasGenerator: new AliasGenerator() });
     }
     else {
         // Handle subquery case - create a QueryBuilder that wraps the subquery
-        return new QueryBuilder(`(${entity.toString()})`, alias || AliasGenerator.generate());
+        return new QueryBuilder({
+            tableName: `(${tableName.toString()})`,
+            tableAlias: tableAlias || new AliasGenerator().generate(),
+            aliasGenerator: new AliasGenerator(),
+        });
     }
 }
 // Create the main query API
