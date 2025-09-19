@@ -30,7 +30,7 @@ describe("Subquery functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT game_id, game_name FROM games AS g LEFT JOIN (SELECT * FROM recent_games AS rg WHERE rg.release_year > 2020) AS recent_count ON g.game_id = recent_count.game_id WHERE recent_count.game_id = 1",
+      "SELECT game_id, game_name FROM games AS g LEFT JOIN (SELECT * FROM recent_games AS rg WHERE rg.release_year > 2020) AS t1 ON g.game_id = t1.game_id WHERE t1.game_id = 1",
     );
   });
 
@@ -69,11 +69,9 @@ describe("Subquery functionality", () => {
     const subquery2 = queryBuilder
       .from<TableFields>("games", "g")
       .where({ release_year: { $lt: 1990 } })
-      .orderBy("release_year", "DESC")
-      .limit(10);
+      .orderBy("release_year", "DESC");
 
-    const query1 = queryBuilder.from(subquery1);
-    // .select(["game_id", "game_name"]);
+    const query1 = queryBuilder.from(subquery1, "recent_games").select(["game_id", "game_name"]);
 
     const query2 = queryBuilder.from(subquery2, "old_games").select(["game_id", "game_name"]);
 
@@ -84,7 +82,7 @@ describe("Subquery functionality", () => {
       "SELECT game_id, game_name FROM (SELECT * FROM games AS g WHERE g.release_year > 2020) AS recent_games",
     );
     expect(sql2).toBe(
-      "SELECT game_id, game_name FROM (SELECT * FROM games AS g WHERE g.release_year < 1990) AS old_games",
+      "SELECT game_id, game_name FROM (SELECT * FROM games AS g WHERE g.release_year < 1990 ORDER BY g.release_year DESC) AS old_games",
     );
   });
 

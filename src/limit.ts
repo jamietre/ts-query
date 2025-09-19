@@ -1,21 +1,29 @@
 import { SelectBuilder } from "./select.js";
-import type { Query } from "./types/query.js";
+import type { Query, QueryFieldsBase } from "./types/query.js";
 import type { Select } from "./types/select.js";
 import type { Limit } from "./types/limit.js";
+import { AliasGenerator } from "./aliasGenerator.js";
 
-export class LimitBuilder<T extends object> implements Select<T> {
+export class LimitBuilder<T extends QueryFieldsBase> implements Select<T> {
   query: Query<T>;
   limitValue: number;
   offsetValue?: number;
+  aliasGenerator: AliasGenerator;
 
-  constructor(query: Query<T>, limit: number, offset?: number) {
-    this.query = query;
-    this.limitValue = limit;
-    this.offsetValue = offset;
+  constructor(options: { query: Query<T>; limit: number; offset?: number; aliasGenerator: AliasGenerator }) {
+    this.query = options.query;
+    this.limitValue = options.limit;
+    this.offsetValue = options.offset;
+    this.aliasGenerator = options.aliasGenerator;
   }
 
   offset(offsetValue: number): Limit<T> {
-    return new LimitBuilder<T>(this.query, this.limitValue, offsetValue);
+    return new LimitBuilder<T>({
+      query: this.query,
+      limit: this.limitValue,
+      offset: offsetValue,
+      aliasGenerator: this.aliasGenerator,
+    });
   }
 
   select(fields: Array<keyof T | Partial<Record<keyof T, string>>>): Select<T>;
@@ -25,6 +33,6 @@ export class LimitBuilder<T extends object> implements Select<T> {
   }
 
   toString(): string {
-    return this.select(["*" as any]).toString();
+    return this.select(["*"]).toString();
   }
 }

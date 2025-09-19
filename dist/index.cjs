@@ -19,8 +19,11 @@ class LimitBuilder {
     offset(offsetValue) {
         return new LimitBuilder(this.query, this.limitValue, offsetValue);
     }
-    select(fields, alias) {
+    select(fields) {
         return new SelectBuilder(this, fields);
+    }
+    toString() {
+        return this.select(["*"]).toString();
     }
 }
 
@@ -42,6 +45,9 @@ class OrderByBuilder {
     limit(count, offset) {
         return new LimitBuilder(this.query, count, offset);
     }
+    toString() {
+        return this.select(["*"]).toString();
+    }
 }
 
 class WhereBuilder {
@@ -55,28 +61,28 @@ class WhereBuilder {
         return new SelectBuilder(this, fields);
     }
     join(entity, alias) {
-        if (typeof entity === 'string') {
+        if (typeof entity === "string") {
             const newQuery = new QueryBuilder(entity, alias || AliasGenerator.generate());
-            return new JoinBuilder(this, newQuery, 'INNER');
+            return new JoinBuilder(this, newQuery, "INNER");
         }
         else {
             // Handle subquery case - create a QueryBuilder that wraps the subquery
             const newQuery = new QueryBuilder(`(${entity.toString()})`, alias || AliasGenerator.generate());
-            return new JoinBuilder(this, newQuery, 'INNER');
+            return new JoinBuilder(this, newQuery, "INNER");
         }
     }
     innerJoin(entity, alias) {
         return this.join(entity, alias);
     }
     leftJoin(entity, alias) {
-        if (typeof entity === 'string') {
+        if (typeof entity === "string") {
             const newQuery = new QueryBuilder(entity, alias || AliasGenerator.generate());
-            return new JoinBuilder(this, newQuery, 'LEFT');
+            return new JoinBuilder(this, newQuery, "LEFT");
         }
         else {
             // Handle subquery case - create a QueryBuilder that wraps the subquery
             const newQuery = new QueryBuilder(`(${entity.toString()})`, alias || AliasGenerator.generate());
-            return new JoinBuilder(this, newQuery, 'LEFT');
+            return new JoinBuilder(this, newQuery, "LEFT");
         }
     }
     where(conditions) {
@@ -86,17 +92,20 @@ class WhereBuilder {
     }
     or(conditions) {
         const orCondition = {
-            type: 'or',
-            conditions
+            type: "or",
+            conditions,
         };
         const newOrConditions = [...this.orConditions, orCondition];
         return new WhereBuilder(this.query, this.conditions, newOrConditions);
     }
-    orderBy(field, direction = 'ASC') {
+    orderBy(field, direction = "ASC") {
         return new OrderByBuilder(this, field, direction);
     }
     limit(count, offset) {
         return new LimitBuilder(this, count, offset);
+    }
+    toString() {
+        return this.select(["*"]).toString();
     }
 }
 
@@ -276,10 +285,12 @@ class SelectBuilder {
     }
     getOrderByClause(query) {
         if (query instanceof OrderByBuilder) {
-            const orderFields = query.orderFields.map(({ field, direction }) => {
+            const orderFields = query.orderFields
+                .map(({ field, direction }) => {
                 const tableAlias = this.getRightmostTableAlias(query.query);
                 return `${tableAlias}.${String(field)} ${direction}`;
-            }).join(', ');
+            })
+                .join(", ");
             return `ORDER BY ${orderFields}`;
         }
         return "";
@@ -374,7 +385,7 @@ class CompoundQueryBuilder {
         this.query2 = query2;
         this.joinInfo = join;
     }
-    select(fields, alias) {
+    select(fields) {
         return new SelectBuilder(this, fields);
     }
     join(entity, alias) {
@@ -407,6 +418,9 @@ class CompoundQueryBuilder {
     }
     orderBy(field, direction = 'ASC') {
         return new OrderByBuilder(this, field, direction);
+    }
+    toString() {
+        return this.select(["*"]).toString();
     }
 }
 
@@ -461,20 +475,24 @@ class QueryBuilder {
     orderBy(field, direction = "ASC") {
         return new OrderByBuilder(this, field, direction);
     }
+    toString() {
+        return this.select(["*"]).toString();
+    }
 }
 
 // Main entry point for ts-query package
+function from(entity, alias) {
+    if (typeof entity === "string") {
+        return new QueryBuilder(entity, alias || AliasGenerator.generate());
+    }
+    else {
+        // Handle subquery case - create a QueryBuilder that wraps the subquery
+        return new QueryBuilder(`(${entity.toString()})`, alias || AliasGenerator.generate());
+    }
+}
 // Create the main query API
 const queryBuilder = {
-    from(entity, alias) {
-        if (typeof entity === 'string') {
-            return new QueryBuilder(entity, alias || AliasGenerator.generate());
-        }
-        else {
-            // Handle subquery case - create a QueryBuilder that wraps the subquery
-            return new QueryBuilder(`(${entity.toString()})`, alias || AliasGenerator.generate());
-        }
-    },
+    from,
 };
 
 exports.queryBuilder = queryBuilder;

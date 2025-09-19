@@ -3,11 +3,11 @@ import { QueryBuilder } from "./query.js";
 import { WhereBuilder } from "./where.js";
 import { LimitBuilder } from "./limit.js";
 import { OrderByBuilder } from "./orderBy.js";
-import type { Query, Queryable } from "./types/query.js";
+import type { Query, Queryable, QueryFieldsBase } from "./types/query.js";
 import type { Limit } from "./types/limit.js";
 import type { OrderBy } from "./types/orderBy.js";
 import type { Select } from "./types/select.js";
-export class SelectBuilder<T extends object> implements Select<T> {
+export class SelectBuilder<T extends QueryFieldsBase> implements Select<T> {
   query: Queryable<T>;
   fields: Partial<Record<keyof T, string>> = {};
 

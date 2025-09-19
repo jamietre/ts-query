@@ -1,22 +1,30 @@
 import { SelectBuilder } from "./select.js";
 import { LimitBuilder } from "./limit.js";
-import type { Query } from "./types/query.js";
+import type { Query, QueryFieldsBase } from "./types/query.js";
 import type { Select } from "./types/select.js";
 import type { OrderBy, OrderDirection } from "./types/orderBy.js";
 import type { Limit } from "./types/limit.js";
+import { AliasGenerator } from "./aliasGenerator.js";
 
-export class OrderByBuilder<T extends object> implements OrderBy<T> {
+export class OrderByBuilder<T extends QueryFieldsBase> implements OrderBy<T> {
   query: Query<T>;
   orderFields: Array<{ field: keyof T; direction: OrderDirection }> = [];
+  aliasGenerator: AliasGenerator;
 
-  constructor(query: Query<T>, field: keyof T, direction: OrderDirection = 'ASC') {
-    this.query = query;
-    this.orderFields = [{ field, direction }];
+  constructor(options: { query: Query<T>; field: keyof T; direction: OrderDirection; aliasGenerator: AliasGenerator }) {
+    this.query = options.query;
+    this.orderFields = [{ field: options.field, direction: options.direction }];
+    this.aliasGenerator = options.aliasGenerator;
   }
 
-  orderBy(field: keyof T, direction: OrderDirection = 'ASC'): OrderBy<T> {
+  orderBy(field: keyof T, direction: OrderDirection = "ASC"): OrderBy<T> {
     const newOrderFields = [...this.orderFields, { field, direction }];
-    const newOrderBy = new OrderByBuilder<T>(this.query, field, direction);
+    const newOrderBy = new OrderByBuilder<T>({
+      query: this.query,
+      field,
+      direction,
+      aliasGenerator: this.aliasGenerator,
+    });
     newOrderBy.orderFields = newOrderFields;
     return newOrderBy;
   }
@@ -32,10 +40,10 @@ export class OrderByBuilder<T extends object> implements OrderBy<T> {
   }
 
   limit(count: number, offset?: number): Limit<T> {
-    return new LimitBuilder<T>(this.query, count, offset);
+    return new LimitBuilder<T>({ query: this.query, limit: count, offset, aliasGenerator: this.aliasGenerator });
   }
 
   toString(): string {
-    return this.select(['*' as any]).toString();
+    return this.select(["*"]).toString();
   }
 }

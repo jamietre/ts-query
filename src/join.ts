@@ -1,22 +1,29 @@
+import { AliasGenerator } from "./aliasGenerator.js";
 import { CompoundQueryBuilder } from "./compoundQuery.js";
-import type { Query } from "./types/query.js";
+import type { Query, QueryFieldsBase } from "./types/query.js";
 
-export type JoinType = 'INNER' | 'LEFT';
+export type JoinType = "INNER" | "LEFT";
 
-export class JoinBuilder<T extends object, U extends object> {
+export class JoinBuilder<T extends QueryFieldsBase, U extends QueryFieldsBase> {
   readonly query1: Query<T>;
   readonly query2: Query<U>;
   readonly joinType: JoinType;
   condition?: Partial<Record<keyof T, keyof U>>;
-
-  constructor(query1: Query<T>, query2: Query<U>, joinType: JoinType = 'LEFT') {
-    this.query1 = query1;
-    this.query2 = query2;
-    this.joinType = joinType;
+  public aliasGenerator: AliasGenerator = new AliasGenerator();
+  constructor(options: { query1: Query<T>; query2: Query<U>; joinType: JoinType; aliasGenerator?: AliasGenerator }) {
+    this.query1 = options.query1;
+    this.query2 = options.query2;
+    this.joinType = options.joinType;
+    this.aliasGenerator = options.aliasGenerator || new AliasGenerator();
   }
 
   on(condition: Partial<Record<keyof T, keyof U>>): Query<T & U> {
     this.condition = condition;
-    return new CompoundQueryBuilder<T, U>(this.query1, this.query2, this);
+    return new CompoundQueryBuilder<T, U>({
+      query1: this.query1,
+      query2: this.query2,
+      join: this,
+      aliasGenerator: this.aliasGenerator,
+    });
   }
 }
