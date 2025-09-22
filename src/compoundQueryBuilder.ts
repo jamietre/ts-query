@@ -4,7 +4,7 @@ import { SelectBuilder } from "./selectBuilder.js";
 import { WhereBuilder } from "./whereBuilder.js";
 import { OrderByBuilder } from "./orderByBuilder.js";
 import { LimitBuilder } from "./limitBuilder.js";
-import type { Query, WhereCondition, Queryable, FieldsBase, FieldsWithStar } from "./types/query.js";
+import type { Query, WhereCondition, Queryable, FieldsBase, FieldsWithStar, OutputOptions } from "./types/query.js";
 import type { Join } from "./types/join.js";
 import type { Select, FieldAliasMapping } from "./types/select.js";
 import type { Where } from "./types/where.js";
@@ -20,17 +20,19 @@ export class CompoundQueryBuilder<T extends FieldsBase, U extends FieldsBase> im
   readonly query2: Query<U>;
   readonly joinInfo: JoinBuilder<T, U>;
   readonly joinFieldMapping?: FieldMap<U>; // Store field mappings from join.select()
-
+  readonly outputOptions: OutputOptions;
   constructor(options: {
     query1: Query<T>;
     query2: Query<U>;
     join: JoinBuilder<T, U>;
     joinFieldMapping?: FieldMap<U>;
+    outputOptions: OutputOptions;
   }) {
     this.query1 = options.query1;
     this.query2 = options.query2;
     this.joinInfo = options.join;
     this.joinFieldMapping = options.joinFieldMapping;
+    this.outputOptions = options.outputOptions;
   }
   select(fields: Array<FieldsWithStar<T & U> | Partial<Record<FieldsWithStar<T & U>, string | true>>>): Select<T & U>;
   select(fields: Partial<Record<FieldsWithStar<T & U>, string | true>>): Select<T & U>;
@@ -39,20 +41,17 @@ export class CompoundQueryBuilder<T extends FieldsBase, U extends FieldsBase> im
   select(fields: any): any {
     return new SelectBuilder<T & U>(this as Query<T & U>, fields);
   }
-  join<V extends FieldsBase, TAlias extends string>(
-    tableName: string | Queryable<V>,
-    tableAlias: TAlias,
-  ): Join<T & U, V> {
-    if (typeof tableName === "string") {
-      const newQuery = new QueryBuilder<V>({ tableName, tableAlias });
-      return new JoinBuilder<T & U, V>({ query1: this, query2: newQuery, joinType: "INNER" });
+  join<V extends FieldsBase, TAlias extends string>(target: string | Queryable<V>, tableAlias: TAlias): Join<T & U, V> {
+    if (typeof target === "string") {
+      const newQuery = new QueryBuilder<V>({ tableName: target, tableAlias });
+      return new JoinBuilder<T & U, V>({ query1: this, query2: newQuery, joinType: "INNER", outputOptions: this.outputOptions });
     } else {
       // Handle subquery case - create a QueryBuilder that wraps the subquery
       const newQuery = new QueryBuilder<V>({
-        tableName: `(${tableName.toString()})`,
+        tableName: `(${target.toString({ ...this.outputOptions, includeTerminator: false })})`,
         tableAlias: tableAlias,
       });
-      return new JoinBuilder<T & U, V>({ query1: this, query2: newQuery, joinType: "INNER" });
+      return new JoinBuilder<T & U, V>({ query1: this, query2: newQuery, joinType: "INNER", outputOptions: this.outputOptions });
     }
   }
 
@@ -66,14 +65,14 @@ export class CompoundQueryBuilder<T extends FieldsBase, U extends FieldsBase> im
   leftJoin<V extends FieldsBase>(tableName: string | Queryable<V>, tableAlias: string): Join<T & U, V> {
     if (typeof tableName === "string") {
       const newQuery = new QueryBuilder<V>({ tableName, tableAlias });
-      return new JoinBuilder<T & U, V>({ query1: this, query2: newQuery, joinType: "LEFT" });
+      return new JoinBuilder<T & U, V>({ query1: this, query2: newQuery, joinType: "LEFT", outputOptions: this.outputOptions });
     } else {
       // Handle subquery case - create a QueryBuilder that wraps the subquery
       const newQuery = new QueryBuilder<V>({
-        tableName: `(${tableName.toString()})`,
+        tableName: `(${tableName.toString({ ...this.outputOptions, includeTerminator: false })})`,
         tableAlias: tableAlias,
       });
-      return new JoinBuilder<T & U, V>({ query1: this, query2: newQuery, joinType: "LEFT" });
+      return new JoinBuilder<T & U, V>({ query1: this, query2: newQuery, joinType: "LEFT", outputOptions: this.outputOptions });
     }
   }
 
@@ -89,7 +88,7 @@ export class CompoundQueryBuilder<T extends FieldsBase, U extends FieldsBase> im
     return new LimitBuilder<T & U>({ query: this, limit: count, offset });
   }
 
-  toString(): string {
-    return this.select(["*" as any]).toString();
+  toString(options?: OutputOptions): string {
+    return this.select(["*" as any]).toString(options);
   }
 }

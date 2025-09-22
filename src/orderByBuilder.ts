@@ -1,6 +1,6 @@
 import { SelectBuilder } from "./selectBuilder.js";
 import { LimitBuilder } from "./limitBuilder.js";
-import type { Query, FieldsBase, FieldsWithStar } from "./types/query.js";
+import type { Query, FieldsBase, FieldsWithStar, OutputOptions } from "./types/query.js";
 import type { Select, FieldAliasMapping } from "./types/select.js";
 import type { OrderBy, OrderDirection } from "./types/orderBy.js";
 import type { Limit } from "./types/limit.js";
@@ -37,7 +37,7 @@ export class OrderByBuilder<T extends FieldsBase> implements OrderBy<T> {
     return new LimitBuilder<T>({ query: this.query, limit: count, offset });
   }
 
-  toString(): string {
-    return this.select(["*"]).toString();
+  toString(options?: OutputOptions): string {
+    return this.select(["*"]).toString(options);
   }
 }

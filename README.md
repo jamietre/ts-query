@@ -2,8 +2,8 @@
 
 ## Why
 
-There are a number of query builders out there, but they all have one thing in common: they're tightly coupled with a database connection library, or 
-heavy type structure that requires creating entity defintions. I want a query builder that has no coupling with anything. You can provide your own
+There are a number of query builders out there, but they all have one thing in common: they're tightly coupled with a database connection library, or
+heavy type structure that requires creating entity definitions. I want a query builder that has no coupling with anything. You can provide your own
 types for every query, and it will infer usage as you build it up. This works great with zod, too, and you can use zod to verify that the results of your
 query are as expected if you want.
 
@@ -13,21 +13,23 @@ query are as expected if you want.
 - **Database Agnostic** - Works with any database connection library (pg, mysql2, sqlite3, etc.)
 - **Full Type Safety** - TypeScript interfaces with complete IntelliSense support
 - **Fluent API** - Chainable methods for readable query building
-- **Flexible Aliasing** - Automatic table aliases or specify your own
+- **Explicit Table Aliases** - Type-safe table aliases with dot notation field references
 - **Advanced Conditions** - Rich where clause builder with operators ($gt, $lt, $in, $like, etc.)
+- **Null/Undefined Handling** - Proper SQL NULL handling (IS NULL, IS NOT NULL)
 - **OR Logic Support** - Both inline `or: [...]` syntax and chained `.or()` methods
 - **Join Operations** - INNER and LEFT joins with type-safe field mapping
 - **Ordering & Pagination** - ORDER BY clauses with multiple fields and LIMIT/OFFSET
-- **Subquery Support** - Embed subqueries in SELECT statements
+- **Subquery Support** - Full subquery support as table sources
 - **Standard SQL Output** - Generates clean, readable SQL compatible with most databases
-
 
 # Usage
 
 ## Basic Query Building
 
+- Query building has complete type safety for fields used in query clauses
+
 ```typescript
-import { query } from 'ts-query';
+import { queryBuilder } from 'ts-query';
 
 interface User {
   id: number;
@@ -36,84 +38,135 @@ interface User {
   age: number;
 }
 
-// Basic select
-const sql = query.from<User>('users')
-  .select(['id', 'name', 'email'])
+
+// Simple query using User as schema
+const sql2 = queryBuilder
+  .from<User>("users")
+  .select(["id", "name", "email"])
   .toString();
-// SELECT id, name, email FROM users AS t1
+// SELECT id, name, email FROM users
+
+
+// Optional syntax to include a table alias
+const sql = queryBuilder
+  .from<User, "u">("users", "u")
+  .select(["u.id", "u.name", "u.email"])
+  .toString();
+// SELECT u.id, u.name, u.email FROM users u
 ```
 
 ## Field Aliasing
 
+- Field names can be aliased, and types of new field names are propagated to subsequent clauses
+
+
 ```typescript
 // Select with field aliases
-const sql = query.from<User>('users')
+const sql = queryBuilder
+  .from<User,>("users")
   .select({
-    user_id: 'id',
-    full_name: 'name',
-    email_address: 'email'
+    "id": "user_id",
+    "name": "full_name",
+    "email": "email_address"
   })
   .toString();
-// SELECT id AS user_id, name AS full_name, email AS email_address FROM users AS t1
+// SELECT d AS user_id, name AS full_name, email AS email_address FROM users
+
+// Mixed array and object selection
+const sql2 = queryBuilder
+  .from<User>("users")
+  .select([
+    "id",
+    { "name": "full_name" },
+    "email"
+  ])
+  .toString();
+// SELECT u.id, u.name AS full_name, u.email FROM users u
 ```
 
 ## Where Conditions
 
-```typescript
-// Simple conditions
-const sql = query.from<User>('users')
-  .where({ age: 25, name: 'John' })
-  .select(['id', 'name'])
-  .toString();
-// SELECT id, name FROM users AS t1 WHERE t1.age = 25 AND t1.name = 'John'
+- Support for all boolean operations, LIKE, IN
+- Can build complex nested conditions with simple syntax
 
-// Operator conditions
-const sql2 = query.from<User>('users')
-  .where({
-    age: { $gt: 18 },
-    name: { $like: 'John%' }
-  })
-  .select(['id', 'name'])
-  .toString();
-// SELECT id, name FROM users AS t1 WHERE t1.age > 18 AND t1.name LIKE 'John%'
-```
 
 ### Supported Operators
 
-- `$eq`: Equal to
+- `$eq`: Equal to (handles null as IS NULL)
 - `$gt`: Greater than
 - `$lt`: Less than
 - `$gte`: Greater than or equal
 - `$lte`: Less than or equal
-- `$ne`: Not equal
+- `$ne`: Not equal (handles null as IS NOT NULL)
 - `$in`: In array
 - `$like`: Like pattern
+
+
+```typescript
+// Simple conditions with dot notation
+const sql = queryBuilder
+  .from<User>("users")
+  .where({ "age": 25, "name": "John" })
+  .select(["id", "name"])
+  .toString();
+// SELECT id, name FROM users WHERE age = 25 AND name = 'John'
+
+// Operator conditions
+const sql2 = queryBuilder
+  .from<User>("users")
+  .where({
+    "age": { $gt: 18 },
+    "name": { $like: "John%" }
+  })
+  .select(["id", "name"])
+  .toString();
+// SELECT id, name FROM users WHERE age > 18 AND name LIKE 'John%'
+
+// Null handling
+const sql3 = queryBuilder
+  .from<User>("users")
+  .where({
+    "email": null,  // IS NULL
+    "name": { $ne: null }  // IS NOT NULL
+  })
+  .select(["id"])
+  .toString();
+// SELECT id FROM users WHERE email IS NULL AND name IS NOT NULL
+```
 
 ## OR Conditions
 
 ```typescript
 // Inline OR conditions
-const sql = query.from<User>('users')
+const sql = queryBuilder
+  .from<User>("users")
   .where({
-    age: { $gt: 65 },
+    "age": { $gt: 65 },
     or: [
-      { name: 'John' },
-      { email: { $like: '%@admin.com' } }
+      { "name": "John" },
+      { "email": { $like: "%@admin.com" } }
     ]
   })
-  .select(['id', 'name'])
+  .select(["id", "name"])
   .toString();
+// SELECT id, name FROM users WHERE age > 65 AND (name = 'John' OR email LIKE '%@admin.com')
 
 // Chained OR conditions
-const sql2 = query.from<User>('users')
-  .where({ age: { $gt: 18 } })
-  .or({ name: 'John' })
-  .or({ email: { $like: '%@vip.com' } })
-  .select(['id', 'name'])
+const sql2 = queryBuilder
+  .from<User>("users")
+  .where({ "age": { $gt: 18 } })
+  .or({ "name": "John" })
+  .or({ "email": { $like: "%@vip.com" } })
+  .select(["id", "u.name"])
   .toString();
+// SELECT id, name FROM users WHERE age > 18 OR name = 'John' OR u.email LIKE '%@vip.com'
 ```
 
 ## Joins
+
+- Support for strongly-type aliasing of joined tables and fields
+- Can join against subqueries
+
 
 ```typescript
 interface Post {
@@ -123,89 +176,104 @@ interface Post {
   content: string;
 }
 
-// Inner join
-const sql = query.from<User>('users')
-  .join<Post>('posts')
-  .on({ id: 'user_id' })
-  .select(['name', 'title'])
+// Inner join with explicit aliases
+const sql = queryBuilder
+  .from<User, "u">("users", "u")
+  .innerJoin<Post, "p">("posts", "p")
+  .on({ "u.id": "p.user_id" })
+  .select(["u.name", "p.title"])
   .toString();
-// SELECT name, title FROM users AS t1 INNER JOIN posts AS t2 ON t1.id = t2.user_id
+// SELECT u.name, p.title FROM users u INNER JOIN posts p ON u.id = p.user_id
 
-// Left join with where
-const sql2 = query.from<User>('users')
-  .leftJoin<Post>('posts')
-  .on({ id: 'user_id' })
-  .where({ age: { $gt: 18 } })
-  .select(['name', 'title'])
+// Left join with where conditions
+const sql2 = queryBuilder
+  .from<User, "u">("users", "u")
+  .leftJoin<Post, "p">("posts", "p")
+  .on({ "u.id": "p.user_id" })
+  .where({ "u.age": { $gt: 18 } })
+  .select({
+    "u.name": "user_name",
+    "p.title": "post_title"
+  })
   .toString();
+// SELECT u.name AS user_name, p.title AS post_title FROM users u LEFT JOIN posts p ON u.id = p.user_id WHERE u.age > 18
 ```
 
 ## Order By
 
 ```typescript
 // Single order by
-const sql = query.from<User>('users')
-  .orderBy('age', 'DESC')
-  .select(['name', 'age'])
+const sql = queryBuilder
+  .from<User, "u">("users", "u")
+  .orderBy("u.age", "DESC")
+  .select(["u.name", "u.age"])
   .toString();
-// SELECT name, age FROM users AS t1 ORDER BY t1.age DESC
+// SELECT u.name, u.age FROM users u ORDER BY u.age DESC
 
-// Multiple order by fields
-const sql2 = query.from<User>('users')
-  .orderBy('age', 'DESC')
-  .orderBy('name', 'ASC')
-  .select(['name', 'age'])
+// Multiple order by fields (chained)
+const sql2 = queryBuilder
+  .from<User, "u">("users", "u")
+  .orderBy("u.age", "DESC")
+  .orderBy("u.name", "ASC")
+  .select(["u.name", "u.age"])
   .toString();
-// SELECT name, age FROM users AS t1 ORDER BY t1.age DESC, t1.name ASC
+// SELECT u.name, u.age FROM users u ORDER BY u.age DESC, u.name ASC
 
-// Order by after where
-const sql3 = query.from<User>('users')
-  .where({ age: { $gt: 18 } })
-  .orderBy('name', 'ASC')
-  .select(['name', 'age'])
+// Order by with where conditions
+const sql3 = queryBuilder
+  .from<User, "u">("users", "u")
+  .where({ "u.age": { $gt: 18 } })
+  .orderBy("u.name", "ASC")
+  .select(["u.name", "u.age"])
   .toString();
-// SELECT name, age FROM users AS t1 WHERE t1.age > 18 ORDER BY t1.name ASC
+// SELECT u.name, u.age FROM users u WHERE u.age > 18 ORDER BY u.name ASC
 ```
 
 ## Limit and Offset
 
 ```typescript
 // Simple limit
-const sql = query.from<User>('users')
-  .select(['name', 'email'])
+const sql = queryBuilder
+  .from<User>("users")
+  .where({ "age": { $gt: 18 } })
   .limit(10)
+  .select(["name", "email"])
   .toString();
-// SELECT name, email FROM users AS t1 LIMIT 10
+// SELECT name, email FROM users u WHERE age > 18 LIMIT 10
 
 // Limit with offset
-const sql2 = query.from<User>('users')
-  .orderBy('id', 'ASC')
-  .select(['name', 'email'])
+const sql2 = queryBuilder
+  .from<User>("users")
+  .orderBy("id", "ASC")
   .limit(10, 20)
+  .select(["name", "email"])
   .toString();
-// SELECT name, email FROM users AS t1 ORDER BY t1.id ASC LIMIT 10 OFFSET 20
+// SELECT name, email FROM users ORDER BY id ASC LIMIT 10 OFFSET 20
 
-// Pagination
-const sql3 = query.from<User>('users')
-  .select(['name', 'email'])
+// Chained offset
+const sql3 = queryBuilder
+  .from<User>("users")
   .limit(10)
   .offset(30)
+  .select(["name", "email"])
   .toString();
-// SELECT name, email FROM users AS t1 LIMIT 10 OFFSET 30
+// SELECT name, email FROM users LIMIT 10 OFFSET 30
 ```
 
 ## Subqueries
 
 ```typescript
-// Subquery in select
-const subquery = query.from<Post>('posts')
-  .where({ user_id: { $eq: 1 } });
+// Subquery as table source
+const subquery = queryBuilder
+  .from<User>("users")
+  .where({ age: { $gt: 18 } });
 
-const sql = query.from<User>('users')
-  .select(subquery, 'user_posts')
+const sql = queryBuilder
+  .from(subquery, "adult_users")
+  .select(["adult_users.name", "adult_users.email"])
   .toString();
-// SELECT (SELECT * FROM posts AS s1 WHERE s1.user_id = 1) AS user_posts FROM users AS t1
-```
+// SELECT adult_users.name, adult_users.email FROM (SELECT * FROM users WHERE age > 18) AS adult_users
+
 
 ## Complex Example
 
@@ -224,30 +292,32 @@ interface Department {
   budget: number;
 }
 
-const sql = query.from<User>('users', 'u')
-  .leftJoin<Department>('departments', 'd')
-  .on({ department_id: 'id' })
+const sql = queryBuilder
+  .from<User, "u">("users", "u")
+  .leftJoin<Department, "d">("departments", "d")
+  .on({ "u.department_id": "d.id" })
   .where({
-    age: { $gte: 21 },
+    "u.age": { $gte: 21 },
     or: [
-      { 'u.email': { $like: '%@company.com' } },
-      { 'd.budget': { $gt: 100000 } }
+      { "u.email": { $like: "%@company.com" } },
+      { "d.budget": { $gt: 100000 } }
     ]
   })
-  .orderBy('age', 'DESC')
-  .orderBy('name', 'ASC')
+  .orderBy("u.age", "DESC")
+  .orderBy("u.name", "ASC")
   .select({
-    user_id: 'u.id',
-    full_name: 'u.name',
-    dept_name: 'd.name'
+    "u.id": "user_id",
+    "u.name": "full_name",
+    "d.name": "dept_name"
   })
   .limit(20, 10)
   .toString();
+// SELECT u.id AS user_id, u.name AS full_name, d.name AS dept_name FROM users u LEFT JOIN departments d ON u.department_id = d.id WHERE u.age >= 21 OR u.email LIKE '%@company.com' OR d.budget > 100000 ORDER BY u.age DESC, u.name ASC LIMIT 20 OFFSET 10;
 ```
 
 ## Type Safety
 
-The query builder provides full TypeScript type safety:
+The query builder provides full TypeScript type safety with explicit table aliases:
 
 ```typescript
 interface User {
@@ -256,13 +326,41 @@ interface User {
   email: string;
 }
 
-const sql = query.from<User>('users')
+const sql = queryBuilder
+  .from<User, "u">("users", "u")
   .where({
-    // ✅ Valid - 'name' exists on User
-    name: 'John',
-    // ❌ TypeScript error - 'invalid_field' doesn't exist on User
-    invalid_field: 'value'
+    // ✅ Valid - 'u.name' uses correct table alias and field
+    "u.name": "John",
+    // ❌ TypeScript error - 'u.invalid_field' doesn't exist on User
+    "u.invalid_field": "value"
   })
-  .orderBy('name', 'ASC')  // ✅ Valid field
-  .select(['id', 'email']); // ✅ Valid fields
+  .orderBy("u.name", "ASC")  // ✅ Valid field with alias
+  .select(["u.id", "u.email"]); // ✅ Valid fields with alias
+
+// Without table alias - fields don't need prefixes
+const sql2 = queryBuilder
+  .from<User>("users")
+  .where({
+    name: "John",  // ✅ Valid - no table alias needed
+    age: { $gt: 18 }
+  })
+  .select(["id", "name"]);
+```
+
+## Star Selection
+
+```typescript
+// Select all fields
+const sql = queryBuilder
+  .from<User, "u">("users", "u")
+  .select(["*"])
+  .toString();
+// SELECT * FROM users u
+
+// Mix star with specific fields
+const sql2 = queryBuilder
+  .from<User>("users")
+  .select(["*", "id"])
+  .toString();
+// SELECT *, id FROM users
 ```

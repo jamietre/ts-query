@@ -13,7 +13,7 @@ describe("Subquery functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT recent_games_count.g.game_id, recent_games_count.g.game_name FROM (SELECT * FROM games g WHERE g.release_year > 2000) AS recent_games_count WHERE recent_games_count.g.game_id = 1",
+      "SELECT recent_games_count.g.game_id, recent_games_count.g.game_name FROM (SELECT * FROM games g WHERE g.release_year > 2000) AS recent_games_count WHERE recent_games_count.g.game_id = 1;",
     );
   });
 
@@ -31,7 +31,7 @@ describe("Subquery functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT g.game_id, g.game_name FROM games g LEFT JOIN (SELECT * FROM recent_games rg WHERE rg.release_year > 2020) recent_count ON g.game_id = recent_count.rg.game_id WHERE g.game_id = 1",
+      "SELECT g.game_id, g.game_name FROM games g LEFT JOIN (SELECT * FROM recent_games rg WHERE rg.release_year > 2020) recent_count ON g.game_id = recent_count.rg.game_id WHERE g.game_id = 1;",
     );
   });
 
@@ -47,7 +47,7 @@ describe("Subquery functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT mario_or_recent.g.game_id, mario_or_recent.g.game_name FROM (SELECT * FROM games g WHERE (g.release_year > 2000) OR (g.game_name LIKE '%Mario%')) AS mario_or_recent",
+      "SELECT mario_or_recent.g.game_id, mario_or_recent.g.game_name FROM (SELECT * FROM games g WHERE g.release_year > 2000 OR g.game_name LIKE '%Mario%') AS mario_or_recent;",
     );
   });
 
@@ -64,7 +64,7 @@ describe("Subquery functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT game_with_dev.g.game_id, game_with_dev.g.game_name FROM (SELECT * FROM games g INNER JOIN developers d ON g.game_id = d.game_id WHERE g.game_id = 1) AS game_with_dev",
+      "SELECT game_with_dev.g.game_id, game_with_dev.g.game_name FROM (SELECT * FROM games g INNER JOIN developers d ON g.game_id = d.game_id WHERE g.game_id = 1) AS game_with_dev;",
     );
   });
 
@@ -86,10 +86,10 @@ describe("Subquery functionality", () => {
     const sql2 = query2.toString();
 
     expect(sql1).toBe(
-      "SELECT recent_games.g.game_id, recent_games.g.game_name FROM (SELECT * FROM games g WHERE g.release_year > 2020) AS recent_games",
+      "SELECT recent_games.g.game_id, recent_games.g.game_name FROM (SELECT * FROM games g WHERE g.release_year > 2020) AS recent_games;",
     );
     expect(sql2).toBe(
-      "SELECT old_games.g.game_id, old_games.g.game_name FROM (SELECT * FROM games g WHERE g.release_year < 1990 ORDER BY g.release_year DESC) AS old_games",
+      "SELECT old_games.g.game_id, old_games.g.game_name FROM (SELECT * FROM games g WHERE g.release_year < 1990 ORDER BY g.release_year DESC) AS old_games;",
     );
   });
 
@@ -106,7 +106,7 @@ describe("Subquery functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT filtered_games.game_id AS id, filtered_games.game_name AS name FROM (SELECT * FROM games WHERE (release_year > 2020) OR (game_name LIKE '%Classic%')) AS filtered_games",
+      "SELECT filtered_games.game_id AS id, filtered_games.game_name AS name FROM (SELECT * FROM games WHERE release_year > 2020 OR game_name LIKE '%Classic%') AS filtered_games;",
     );
   });
 
@@ -124,7 +124,7 @@ describe("Subquery functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT sorted_games.game_id, sorted_games.game_name FROM (SELECT * FROM games WHERE release_year > 2000 ORDER BY release_year DESC) AS sorted_games WHERE sorted_games.game_id < 100 ORDER BY sorted_games.game_name ASC",
+      "SELECT sorted_games.game_id, sorted_games.game_name FROM (SELECT * FROM games WHERE release_year > 2000 ORDER BY release_year DESC) AS sorted_games WHERE sorted_games.game_id < 100 ORDER BY sorted_games.game_name ASC;",
     );
   });
 });

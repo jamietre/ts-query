@@ -26,7 +26,7 @@ function from<T extends FieldsBase, TAlias extends string | undefined>(
   } else {
     // Handle subquery case - create a QueryBuilder that wraps the subquery
     return new QueryBuilder<AliasedFields<TAlias, T>>({
-      tableName: `(${tableName.toString()})`,
+      tableName: `(${tableName.toString({ includeTerminator: false })})`,
       tableAlias: tableAlias,
     });
   }

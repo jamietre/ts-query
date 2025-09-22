@@ -3,7 +3,7 @@ import { SelectBuilder } from "./selectBuilder.js";
 import { JoinBuilder } from "./joinBuilder.js";
 import { LimitBuilder } from "./limitBuilder.js";
 import { OrderByBuilder } from "./orderByBuilder.js";
-import type { Query, WhereCondition, Queryable, FieldsBase, FieldsWithStar } from "./types/query.js";
+import type { Query, WhereCondition, Queryable, FieldsBase, FieldsWithStar, OutputOptions } from "./types/query.js";
 import type { Select, FieldAliasMapping } from "./types/select.js";
 import type { Join } from "./types/join.js";
 import type { Limit } from "./types/limit.js";
@@ -32,14 +32,14 @@ export class WhereBuilder<T extends FieldsBase> implements Where<T> {
   join<U extends FieldsBase, TAlias extends string>(tableName: string | Queryable<U>, tableAlias: TAlias): Join<T, U> {
     if (typeof tableName === "string") {
       const newQuery = new QueryBuilder<U>({ tableName, tableAlias });
-      return new JoinBuilder<T, U>({ query1: this, query2: newQuery, joinType: "INNER" });
+      return new JoinBuilder<T, U>({ query1: this, query2: newQuery, joinType: "INNER", outputOptions: { includeTerminator: true } });
     } else {
       // Handle subquery case - create a QueryBuilder that wraps the subquery
       const newQuery = new QueryBuilder<U>({
-        tableName: `(${tableName.toString()})`,
+        tableName: `(${tableName.toString({ includeTerminator: false })})`,
         tableAlias,
       });
-      return new JoinBuilder<T, U>({ query1: this, query2: newQuery, joinType: "INNER" });
+      return new JoinBuilder<T, U>({ query1: this, query2: newQuery, joinType: "INNER", outputOptions: { includeTerminator: true } });
     }
   }
 
@@ -53,17 +53,18 @@ export class WhereBuilder<T extends FieldsBase> implements Where<T> {
         tableName: entity,
         tableAlias: alias,
       });
-      return new JoinBuilder<T, U>({ query1: this, query2: newQuery, joinType: "LEFT" });
+      return new JoinBuilder<T, U>({ query1: this, query2: newQuery, joinType: "LEFT", outputOptions: { includeTerminator: true } });
     } else {
       // Handle subquery case - create a QueryBuilder that wraps the subquery
       const newQuery = new QueryBuilder<U>({
-        tableName: `(${entity.toString()})`,
+        tableName: `(${entity.toString({ includeTerminator: false })})`,
         tableAlias: alias,
       });
       return new JoinBuilder<T, U>({
         query1: this,
         query2: newQuery,
         joinType: "LEFT",
+        outputOptions: { includeTerminator: true },
       });
     }
   }
@@ -99,7 +100,7 @@ export class WhereBuilder<T extends FieldsBase> implements Where<T> {
     return new LimitBuilder<T>({ query: this, limit: count, offset });
   }
 
-  toString(): string {
-    return this.select(["*"]).toString();
+  toString(options?: OutputOptions): string {
+    return this.select(["*"]).toString(options);
   }
 }

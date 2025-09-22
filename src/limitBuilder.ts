@@ -1,5 +1,5 @@
 import { SelectBuilder } from "./selectBuilder.js";
-import type { Query, FieldsBase, FieldsWithStar } from "./types/query.js";
+import type { Query, FieldsBase, FieldsWithStar, OutputOptions } from "./types/query.js";
 import type { Select, FieldAliasMapping } from "./types/select.js";
 import type { Limit } from "./types/limit.js";
 
@@ -30,7 +30,7 @@ export class LimitBuilder<T extends FieldsBase> implements Select<T> {
     return new SelectBuilder(this, fields);
   }
 
-  toString(): string {
-    return this.select(["*"]).toString();
+  toString(options?: OutputOptions): string {
+    return this.select(["*"]).toString(options);
   }
 }

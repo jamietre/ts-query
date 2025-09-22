@@ -1,5 +1,5 @@
 import { CompoundQueryBuilder } from "./compoundQueryBuilder.js";
-import type { Query, FieldsBase } from "./types/query.js";
+import type { Query, FieldsBase, OutputOptions } from "./types/query.js";
 import type { Join, JoinWithFields } from "./types/join.js";
 
 type FieldMap<T> = {
@@ -12,12 +12,19 @@ export class JoinBuilder<TLeft extends FieldsBase, TRight extends FieldsBase> im
   readonly query1: Query<TLeft>;
   readonly query2: Query<TRight>;
   readonly joinType: JoinType;
+  readonly outputOptions: OutputOptions;
   condition?: Partial<Record<keyof TLeft, keyof TRight>>;
 
-  constructor(options: { query1: Query<TLeft>; query2: Query<TRight>; joinType: JoinType }) {
+  constructor(options: {
+    query1: Query<TLeft>;
+    query2: Query<TRight>;
+    joinType: JoinType;
+    outputOptions: OutputOptions;
+  }) {
     this.query1 = options.query1;
     this.query2 = options.query2;
     this.joinType = options.joinType;
+    this.outputOptions = options.outputOptions;
   }
   // Original on() method for immediate join without field selection
   on(condition: Partial<Record<keyof TLeft, keyof TRight>>): Query<TLeft & TRight> {
@@ -26,6 +33,7 @@ export class JoinBuilder<TLeft extends FieldsBase, TRight extends FieldsBase> im
       query1: this.query1,
       query2: this.query2,
       join: this,
+      outputOptions: this.outputOptions,
     });
   }
 }

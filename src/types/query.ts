@@ -15,9 +15,13 @@ export type AliasedFields<TAlias extends string | undefined, U extends FieldsBas
   ? U
   : { [K in keyof U as `${TAlias}.${K & string}`]: U[K] };
 
+export type OutputOptions = {
+  format?: "indented" | "compact";
+  includeTerminator?: boolean;
+};
 // anything that can start a query
 export interface Queryable<T = never> {
-  toString(): string;
+  toString(options?: OutputOptions): string;
 }
 
 export type AnyQueryable<T extends FieldsBase> = Limit<T> | Where<T> | OrderBy<T> | Select<T> | Join<any, T> | Query<T>;

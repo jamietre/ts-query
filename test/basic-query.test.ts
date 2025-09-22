@@ -6,14 +6,14 @@ describe("Basic Query Functionality", () => {
   it("should create a basic query with from method", () => {
     const query = queryBuilder.from<TableFields, "g">("games", "g");
 
-    expect(query.toString()).toBe("SELECT * FROM games g");
+    expect(query.toString()).toBe("SELECT * FROM games g;");
   });
 
   it("should generate SQL for simple select with array of fields", () => {
     const query = queryBuilder.from<TableFields, "g">("games", "g").select(["g.game_id", "g.game_name"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT g.game_id, g.game_name FROM games g");
+    expect(sql).toBe("SELECT g.game_id, g.game_name FROM games g;");
   });
 
   it("should generate SQL for simple select with field mapping", () => {
@@ -23,7 +23,7 @@ describe("Basic Query Functionality", () => {
     });
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT g.game_id AS id, g.game_name AS name FROM games g");
+    expect(sql).toBe("SELECT g.game_id AS id, g.game_name AS name FROM games g;");
   });
 
   it("should handle select with same field name and alias", () => {
@@ -33,7 +33,7 @@ describe("Basic Query Functionality", () => {
     });
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT g.game_id AS game_id, g.game_name AS title FROM games g");
+    expect(sql).toBe("SELECT g.game_id AS game_id, g.game_name AS title FROM games g;");
   });
 
   it("should handle mixed array with strings and objects", () => {
@@ -44,7 +44,7 @@ describe("Basic Query Functionality", () => {
     ]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT g.game_id, g.game_name AS title, g.release_year FROM games g");
+    expect(sql).toBe("SELECT g.game_id, g.game_name AS title, g.release_year FROM games g;");
   });
 
   it("should handle array with only objects", () => {
@@ -53,7 +53,7 @@ describe("Basic Query Functionality", () => {
       .select([{ "g.game_id": "id" }, { "g.game_name": "name" }, { "g.release_year": "year" }]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT g.game_id AS id, g.game_name AS name, g.release_year AS year FROM games g");
+    expect(sql).toBe("SELECT g.game_id AS id, g.game_name AS name, g.release_year AS year FROM games g;");
   });
 
   it("should handle mixed array with multiple fields in objects", () => {
@@ -62,7 +62,7 @@ describe("Basic Query Functionality", () => {
       .select(["g.game_id", { "g.game_name": "title", "g.release_year": "year" }]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT g.game_id, g.game_name AS title, g.release_year AS year FROM games g");
+    expect(sql).toBe("SELECT g.game_id, g.game_name AS title, g.release_year AS year FROM games g;");
   });
 
   it("should handle multiple joins in sequence", () => {
@@ -81,7 +81,7 @@ describe("Basic Query Functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT g.game_id AS id, g.game_name AS name, d.description AS desc, p.publisher_name AS publisher FROM games g LEFT JOIN developers d ON g.game_id = d.game_id LEFT JOIN publishers p ON d.game_id = p.game_id",
+      "SELECT g.game_id AS id, g.game_name AS name, d.description AS desc, p.publisher_name AS publisher FROM games g LEFT JOIN developers d ON g.game_id = d.game_id LEFT JOIN publishers p ON d.game_id = p.game_id;",
     );
   });
 
@@ -95,6 +95,6 @@ describe("Basic Query Functionality", () => {
       });
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT g.game_id AS id FROM games g LEFT JOIN developers d ON g.game_id = d.game_id");
+    expect(sql).toBe("SELECT g.game_id AS id FROM games g LEFT JOIN developers d ON g.game_id = d.game_id;");
   });
 });

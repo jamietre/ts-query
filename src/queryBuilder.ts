@@ -3,7 +3,7 @@ import { SelectBuilder } from "./selectBuilder.js";
 import { WhereBuilder } from "./whereBuilder.js";
 import { OrderByBuilder } from "./orderByBuilder.js";
 import { LimitBuilder } from "./limitBuilder.js";
-import type { Query, WhereCondition, Queryable, FieldsBase, FieldsWithStar, AliasedFields } from "./types/query.js";
+import type { Query, WhereCondition, Queryable, FieldsBase, FieldsWithStar, AliasedFields, OutputOptions } from "./types/query.js";
 import type { Join } from "./types/join.js";
 import type { Select, FieldAliasMapping } from "./types/select.js";
 import type { Where } from "./types/where.js";
@@ -40,17 +40,19 @@ export class QueryBuilder<TQuery extends FieldsBase> implements Query<TQuery> {
         query1: this,
         query2: newQuery,
         joinType: "INNER",
+        outputOptions: { includeTerminator: true },
       });
     } else {
       // Handle subquery case - create a QueryBuilder that wraps the subquery
       const newQuery = new QueryBuilder<AliasedFields<TAlias, TOther>>({
-        tableName: `(${tableName.toString()})`,
+        tableName: `(${tableName.toString({ includeTerminator: false })})`,
         tableAlias,
       });
       return new JoinBuilder<TQuery, AliasedFields<TAlias, TOther>>({
         query1: this,
         query2: newQuery,
         joinType: "INNER",
+        outputOptions: { includeTerminator: true },
       });
     }
   }
@@ -75,17 +77,19 @@ export class QueryBuilder<TQuery extends FieldsBase> implements Query<TQuery> {
         query1: this,
         query2: newQuery,
         joinType: "LEFT",
+        outputOptions: { includeTerminator: true },
       });
     } else {
       // Handle subquery case - create a QueryBuilder that wraps the subquery
       const newQuery = new QueryBuilder<AliasedFields<TAlias, TOther>>({
-        tableName: `(${tableName.toString()})`,
+        tableName: `(${tableName.toString({ includeTerminator: false })})`,
         tableAlias,
       });
       return new JoinBuilder<TQuery, AliasedFields<TAlias, TOther>>({
         query1: this,
         query2: newQuery,
         joinType: "LEFT",
+        outputOptions: { includeTerminator: true },
       });
     }
   }
@@ -102,7 +106,7 @@ export class QueryBuilder<TQuery extends FieldsBase> implements Query<TQuery> {
     return new LimitBuilder<TQuery>({ query: this, limit: count, offset });
   }
 
-  toString(): string {
-    return this.select(["*"]).toString();
+  toString(options?: OutputOptions): string {
+    return this.select(["*"]).toString(options);
   }
 }

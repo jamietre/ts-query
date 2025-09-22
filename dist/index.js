@@ -1,35 +1,21 @@
-class AliasGenerator {
-    constructor() {
-        this.counter = 0;
-    }
-    generate() {
-        return `t${++this.counter}`;
-    }
-    reset() {
-        this.counter = 0;
-    }
-}
-
 class LimitBuilder {
     constructor(options) {
         this.query = options.query;
         this.limitValue = options.limit;
         this.offsetValue = options.offset;
-        this.aliasGenerator = options.aliasGenerator;
     }
     offset(offsetValue) {
         return new LimitBuilder({
             query: this.query,
             limit: this.limitValue,
             offset: offsetValue,
-            aliasGenerator: this.aliasGenerator,
         });
     }
     select(fields) {
         return new SelectBuilder(this, fields);
     }
-    toString() {
-        return this.select(["*"]).toString();
+    toString(options) {
+        return this.select(["*"]).toString(options);
     }
 }
 
@@ -38,7 +24,6 @@ class OrderByBuilder {
         this.orderFields = [];
         this.query = options.query;
         this.orderFields = [{ field: options.field, direction: options.direction }];
-        this.aliasGenerator = options.aliasGenerator;
     }
     orderBy(field, direction = "ASC") {
         const newOrderFields = [...this.orderFields, { field, direction }];
@@ -46,7 +31,6 @@ class OrderByBuilder {
             query: this.query,
             field,
             direction,
-            aliasGenerator: this.aliasGenerator,
         });
         newOrderBy.orderFields = newOrderFields;
         return newOrderBy;
@@ -55,10 +39,10 @@ class OrderByBuilder {
         return new SelectBuilder(this, fields);
     }
     limit(count, offset) {
-        return new LimitBuilder({ query: this.query, limit: count, offset, aliasGenerator: this.aliasGenerator });
+        return new LimitBuilder({ query: this.query, limit: count, offset });
     }
-    toString() {
-        return this.select(["*"]).toString();
+    toString(options) {
+        return this.select(["*"]).toString(options);
     }
 }
 
@@ -68,24 +52,22 @@ class WhereBuilder {
         this.query = options.query;
         this.conditions = options.conditions;
         this.orConditions = options.orConditions;
-        this.aliasGenerator = options.aliasGenerator;
     }
     select(fields) {
         return new SelectBuilder(this, fields);
     }
     join(tableName, tableAlias) {
         if (typeof tableName === "string") {
-            const newQuery = new QueryBuilder({ tableName, tableAlias, aliasGenerator: this.aliasGenerator });
-            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "INNER" });
+            const newQuery = new QueryBuilder({ tableName, tableAlias });
+            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "INNER", outputOptions: { includeTerminator: true } });
         }
         else {
             // Handle subquery case - create a QueryBuilder that wraps the subquery
             const newQuery = new QueryBuilder({
-                tableName: `(${tableName.toString()})`,
+                tableName: `(${tableName.toString({ includeTerminator: false })})`,
                 tableAlias,
-                aliasGenerator: this.aliasGenerator,
             });
-            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "INNER" });
+            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "INNER", outputOptions: { includeTerminator: true } });
         }
     }
     innerJoin(entity, alias) {
@@ -95,23 +77,21 @@ class WhereBuilder {
         if (typeof entity === "string") {
             const newQuery = new QueryBuilder({
                 tableName: entity,
-                tableAlias: alias || new AliasGenerator().generate(),
-                aliasGenerator: this.aliasGenerator,
+                tableAlias: alias,
             });
-            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "LEFT" });
+            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "LEFT", outputOptions: { includeTerminator: true } });
         }
         else {
             // Handle subquery case - create a QueryBuilder that wraps the subquery
             const newQuery = new QueryBuilder({
-                tableName: `(${entity.toString()})`,
-                tableAlias: alias || new AliasGenerator().generate(),
-                aliasGenerator: this.aliasGenerator,
+                tableName: `(${entity.toString({ includeTerminator: false })})`,
+                tableAlias: alias,
             });
             return new JoinBuilder({
                 query1: this,
                 query2: newQuery,
                 joinType: "LEFT",
-                aliasGenerator: this.aliasGenerator,
+                outputOptions: { includeTerminator: true },
             });
         }
     }
@@ -122,7 +102,6 @@ class WhereBuilder {
             query: this.query,
             conditions: mergedConditions,
             orConditions: this.orConditions,
-            aliasGenerator: this.aliasGenerator,
         });
     }
     or(conditions) {
@@ -135,17 +114,16 @@ class WhereBuilder {
             query: this.query,
             conditions: this.conditions,
             orConditions: newOrConditions,
-            aliasGenerator: this.aliasGenerator,
         });
     }
     orderBy(field, direction = "ASC") {
-        return new OrderByBuilder({ query: this, field, direction, aliasGenerator: this.aliasGenerator });
+        return new OrderByBuilder({ query: this, field, direction });
     }
     limit(count, offset) {
-        return new LimitBuilder({ query: this, limit: count, offset, aliasGenerator: this.aliasGenerator });
+        return new LimitBuilder({ query: this, limit: count, offset });
     }
-    toString() {
-        return this.select(["*"]).toString();
+    toString(options) {
+        return this.select(["*"]).toString(options);
     }
 }
 
@@ -177,23 +155,68 @@ class SelectBuilder {
     select(fields) {
         return new SelectBuilder(this.query, fields);
     }
-    getSource(query) {
+    getJoinSource(query) {
         if (query instanceof QueryBuilder) {
-            return `${query.tableName} AS ${query.tableAlias}`;
+            // For JOIN clauses, don't use AS keyword
+            const isSubquery = query.tableName.startsWith("(");
+            return isSubquery ? `${query.tableName} ${query.tableAlias}` : `${query.tableName} ${query.tableAlias}`;
         }
         else if (query instanceof CompoundQueryBuilder) {
             const left = this.getSource(query.query1);
-            const right = this.getSource(query.query2);
+            const right = this.getJoinSource(query.query2);
             const on = Object.entries(query.joinInfo.condition || {})
                 .map(([key, value]) => {
-                // Get the rightmost table alias from the left side of the join
-                const leftAlias = this.getRightmostTableAlias(query.query1);
-                const rightAlias = this.getRightmostTableAlias(query.query2);
-                return `${leftAlias}.${String(key)} = ${rightAlias}.${String(value)}`;
+                const leftSide = String(key).includes(".")
+                    ? String(key)
+                    : `${this.getRightmostTableAlias(query.query1)}.${String(key)}`;
+                const rightSide = String(value).includes(".")
+                    ? String(value)
+                    : `${this.getRightmostTableAlias(query.query2)}.${String(value)}`;
+                return `${leftSide} = ${rightSide}`;
             })
                 .join(" AND ");
             const joinType = query.joinInfo.joinType;
             return `${left} ${joinType} JOIN ${right} ON ${on}`;
+        }
+        else if (query instanceof WhereBuilder) {
+            return this.getJoinSource(query.query);
+        }
+        else if (query instanceof LimitBuilder) {
+            return this.getJoinSource(query.query);
+        }
+        else if (query instanceof OrderByBuilder) {
+            return this.getJoinSource(query.query);
+        }
+        return "";
+    }
+    getSource(query) {
+        if (query instanceof QueryBuilder) {
+            // Only emit alias if the overall query context has joins OR if this is a subquery OR if an alias was explicitly provided
+            const hasJoins = this.queryHasJoins(this.query);
+            const isSubquery = query.tableName.startsWith("(");
+            const hasExplicitAlias = query.tableAlias !== undefined;
+            return hasJoins || isSubquery || hasExplicitAlias ?
+                (isSubquery ? `${query.tableName} AS ${query.tableAlias}` : `${query.tableName} ${query.tableAlias}`) :
+                query.tableName;
+        }
+        else if (query instanceof CompoundQueryBuilder) {
+            const left = this.getSource(query.query1);
+            const on = Object.entries(query.joinInfo.condition || {})
+                .map(([key, value]) => {
+                // If key/value already contains dot notation, use as-is, otherwise add table alias
+                const leftSide = String(key).includes(".")
+                    ? String(key)
+                    : `${this.getRightmostTableAlias(query.query1)}.${String(key)}`;
+                const rightSide = String(value).includes(".")
+                    ? String(value)
+                    : `${this.getRightmostTableAlias(query.query2)}.${String(value)}`;
+                return `${leftSide} = ${rightSide}`;
+            })
+                .join(" AND ");
+            const joinType = query.joinInfo.joinType;
+            // For JOIN clauses, we need to format the right side without AS
+            const rightFormatted = this.getJoinSource(query.query2);
+            return `${left} ${joinType} JOIN ${rightFormatted} ON ${on}`;
         }
         else if (query instanceof WhereBuilder) {
             return this.getSource(query.query);
@@ -226,6 +249,8 @@ class SelectBuilder {
         return "";
     }
     formatCondition(key, value, tableAlias) {
+        // Use key as-is if it already contains dot notation, otherwise add table alias if available
+        const fieldName = key.includes(".") ? key : (tableAlias ? `${tableAlias}.${key}` : key);
         if (typeof value === "object" && value !== null && !Array.isArray(value)) {
             // Handle operators like $gt, $lt, etc.
             const entries = Object.entries(value);
@@ -233,27 +258,39 @@ class SelectBuilder {
                 const [operator, operatorValue] = entries[0];
                 switch (operator) {
                     case "$eq":
-                        return `${tableAlias}.${key} = ${this.formatValue(operatorValue)}`;
+                        // Handle $eq with null as IS NULL
+                        if (operatorValue == undefined) {
+                            return `${fieldName} IS NULL`;
+                        }
+                        return `${fieldName} = ${this.formatValue(operatorValue)}`;
                     case "$gt":
-                        return `${tableAlias}.${key} > ${this.formatValue(operatorValue)}`;
+                        return `${fieldName} > ${this.formatValue(operatorValue)}`;
                     case "$lt":
-                        return `${tableAlias}.${key} < ${this.formatValue(operatorValue)}`;
+                        return `${fieldName} < ${this.formatValue(operatorValue)}`;
                     case "$gte":
-                        return `${tableAlias}.${key} >= ${this.formatValue(operatorValue)}`;
+                        return `${fieldName} >= ${this.formatValue(operatorValue)}`;
                     case "$lte":
-                        return `${tableAlias}.${key} <= ${this.formatValue(operatorValue)}`;
+                        return `${fieldName} <= ${this.formatValue(operatorValue)}`;
                     case "$ne":
-                        return `${tableAlias}.${key} != ${this.formatValue(operatorValue)}`;
+                        // Handle $ne with null as IS NOT NULL
+                        if (operatorValue == undefined) {
+                            return `${fieldName} IS NOT NULL`;
+                        }
+                        return `${fieldName} != ${this.formatValue(operatorValue)}`;
                     case "$in":
-                        return `${tableAlias}.${key} IN (${Array.isArray(operatorValue) ? operatorValue.map((v) => this.formatValue(v)).join(", ") : this.formatValue(operatorValue)})`;
+                        return `${fieldName} IN (${Array.isArray(operatorValue) ? operatorValue.map((v) => this.formatValue(v)).join(", ") : this.formatValue(operatorValue)})`;
                     case "$like":
-                        return `${tableAlias}.${key} LIKE ${this.formatValue(operatorValue)}`;
+                        return `${fieldName} LIKE ${this.formatValue(operatorValue)}`;
                     default:
-                        return `${tableAlias}.${key} = ${this.formatValue(operatorValue)}`;
+                        return `${fieldName} = ${this.formatValue(operatorValue)}`;
                 }
             }
         }
-        return `${tableAlias}.${key} = ${this.formatValue(value)}`;
+        // Handle null/undefined values - use IS NULL instead of = null
+        if (value == undefined) {
+            return `${fieldName} IS NULL`;
+        }
+        return `${fieldName} = ${this.formatValue(value)}`;
     }
     getWhereClause(query) {
         if (query instanceof WhereBuilder) {
@@ -274,7 +311,8 @@ class SelectBuilder {
                     return this.formatCondition(key, value, tableAlias);
                 })
                     .join(" AND ");
-                return `(${orClauses})`;
+                // Only wrap in parentheses if there are multiple clauses
+                return Object.entries(orCondition).length > 1 ? `(${orClauses})` : orClauses;
             });
             // Handle chained OR conditions
             const chainedOrConditions = query.orConditions.map((orCondition) => {
@@ -284,15 +322,22 @@ class SelectBuilder {
                     return this.formatCondition(key, value, tableAlias);
                 })
                     .join(" AND ");
-                return `(${orClauses})`;
+                // Only wrap in parentheses if there are multiple clauses
+                return Object.entries(orCondition.conditions).length > 1 ? `(${orClauses})` : orClauses;
             });
             // Combine all OR conditions
             const allOrConditions = [...inlineOrClauses, ...chainedOrConditions];
             let allConditions = conditions;
             if (allOrConditions.length > 0) {
-                allConditions = allConditions
-                    ? `(${allConditions}) OR ${allOrConditions.join(" OR ")}`
-                    : allOrConditions.join(" OR ");
+                if (allConditions) {
+                    // Only wrap main conditions in parentheses if there are multiple main conditions
+                    const mainConditionsCount = Object.keys(mainConditions).length;
+                    const wrappedMainConditions = mainConditionsCount > 1 ? `(${allConditions})` : allConditions;
+                    allConditions = `${wrappedMainConditions} OR ${allOrConditions.join(" OR ")}`;
+                }
+                else {
+                    allConditions = allOrConditions.join(" OR ");
+                }
             }
             const nestedWhere = this.getWhereClause(query.query);
             return nestedWhere ? `${allConditions} AND ${nestedWhere}` : allConditions;
@@ -373,7 +418,10 @@ class SelectBuilder {
             const orderFields = query.orderFields
                 .map(({ field, direction }) => {
                 const tableAlias = this.getRightmostTableAlias(query.query);
-                return `${tableAlias}.${String(field)} ${direction}`;
+                const fieldName = String(field);
+                // Use field as-is if it already contains dot notation, otherwise add table alias if available
+                const fullFieldName = fieldName.includes(".") ? fieldName : (tableAlias ? `${tableAlias}.${fieldName}` : fieldName);
+                return `${fullFieldName} ${direction}`;
             })
                 .join(", ");
             return `ORDER BY ${orderFields}`;
@@ -386,31 +434,31 @@ class SelectBuilder {
         }
         return String(value);
     }
-    toString() {
+    toString(options) {
         // Handle regular field selection
         // When it's mapped from { key: value } the actual output name (the alias) is the key
         const hasJoins = this.queryHasJoins(this.query);
         const fields = Object.entries(this.fields)
-            .map(([alias, column]) => {
+            .map(([fieldName, alias]) => {
             // Handle "*" case - don't add table aliases
-            if (column === "*") {
+            if (alias === "*") {
                 return "*";
             }
+            // Handle true case - use the fieldName as-is with no alias
+            if (alias === true) {
+                return fieldName;
+            }
             // Check if this is a mapped field from join field mapping
-            let actualField = column;
+            let actualField = fieldName;
             if (hasJoins && this.query instanceof CompoundQueryBuilder && this.query.joinFieldMapping) {
-                // If the alias exists in the field mapping, use the mapped field name
-                if (alias in this.query.joinFieldMapping) {
-                    actualField = String(this.query.joinFieldMapping[alias]);
+                // If the fieldName exists in the field mapping, use the mapped field name
+                if (fieldName in this.query.joinFieldMapping) {
+                    actualField = String(this.query.joinFieldMapping[fieldName]);
                 }
             }
-            // Only add table aliases if there are joins
-            let fullColumnName = actualField;
-            if (hasJoins) {
-                const tableAlias = this.getTableAliasForField(this.query, alias);
-                fullColumnName = tableAlias ? `${tableAlias}.${actualField}` : actualField;
-            }
-            if (alias === actualField) {
+            // Don't add table prefixes - use just the field name
+            const fullColumnName = actualField;
+            if (fieldName === alias) {
                 return fullColumnName;
             }
             return `${fullColumnName} AS ${alias}`;
@@ -430,7 +478,7 @@ class SelectBuilder {
         if (limitClause) {
             sql += ` ${limitClause}`;
         }
-        return sql;
+        return (options?.includeTerminator ?? true) ? sql + ';' : sql;
     }
 }
 
@@ -440,23 +488,23 @@ class CompoundQueryBuilder {
         this.query2 = options.query2;
         this.joinInfo = options.join;
         this.joinFieldMapping = options.joinFieldMapping;
-        this.aliasGenerator = options.aliasGenerator;
+        this.outputOptions = options.outputOptions;
     }
     select(fields) {
         return new SelectBuilder(this, fields);
     }
-    join(tableName, tableAlias) {
-        if (typeof tableName === "string") {
-            const newQuery = new QueryBuilder({ tableName, tableAlias, aliasGenerator: this.aliasGenerator });
-            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "INNER" });
+    join(target, tableAlias) {
+        if (typeof target === "string") {
+            const newQuery = new QueryBuilder({ tableName: target, tableAlias });
+            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "INNER", outputOptions: this.outputOptions });
         }
         else {
             // Handle subquery case - create a QueryBuilder that wraps the subquery
             const newQuery = new QueryBuilder({
-                tableName: `(${tableName.toString()})`,
-                aliasGenerator: this.aliasGenerator,
+                tableName: `(${target.toString({ ...this.outputOptions, includeTerminator: false })})`,
+                tableAlias: tableAlias,
             });
-            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "INNER" });
+            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "INNER", outputOptions: this.outputOptions });
         }
     }
     innerJoin(tableName, tableAlias) {
@@ -464,71 +512,38 @@ class CompoundQueryBuilder {
     }
     leftJoin(tableName, tableAlias) {
         if (typeof tableName === "string") {
-            const newQuery = new QueryBuilder({ tableName, tableAlias, aliasGenerator: this.aliasGenerator });
-            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "LEFT" });
+            const newQuery = new QueryBuilder({ tableName, tableAlias });
+            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "LEFT", outputOptions: this.outputOptions });
         }
         else {
             // Handle subquery case - create a QueryBuilder that wraps the subquery
             const newQuery = new QueryBuilder({
-                tableName: `(${tableName.toString()})`,
+                tableName: `(${tableName.toString({ ...this.outputOptions, includeTerminator: false })})`,
                 tableAlias: tableAlias,
-                aliasGenerator: this.aliasGenerator,
             });
-            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "LEFT" });
+            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "LEFT", outputOptions: this.outputOptions });
         }
     }
     where(conditions) {
-        return new WhereBuilder({ query: this, conditions, orConditions: [], aliasGenerator: this.aliasGenerator });
+        return new WhereBuilder({ query: this, conditions, orConditions: [] });
     }
     orderBy(field, direction = "ASC") {
-        return new OrderByBuilder({ query: this, field, direction, aliasGenerator: this.aliasGenerator });
+        return new OrderByBuilder({ query: this, field, direction });
     }
     limit(count, offset) {
-        return new LimitBuilder({ query: this, limit: count, offset, aliasGenerator: this.aliasGenerator });
+        return new LimitBuilder({ query: this, limit: count, offset });
     }
-    toString() {
-        return this.select(["*"]).toString();
-    }
-}
-
-class JoinWithFieldsBuilder {
-    constructor(options) {
-        this.query1 = options.query1;
-        this.query2 = options.query2;
-        this.joinBuilder = options.joinBuilder;
-        this.selectedFields = options.selectedFields;
-    }
-    on(condition) {
-        // Set the condition on the original join builder
-        this.joinBuilder.condition = condition;
-        // Determine if we have field mappings
-        const joinFieldMapping = !Array.isArray(this.selectedFields) ? this.selectedFields : undefined;
-        // Create the compound query builder with the selected fields information
-        return new CompoundQueryBuilder({
-            query1: this.query1,
-            query2: this.query2,
-            join: this.joinBuilder,
-            aliasGenerator: this.joinBuilder.aliasGenerator,
-            joinFieldMapping,
-        });
+    toString(options) {
+        return this.select(["*"]).toString(options);
     }
 }
 
 class JoinBuilder {
     constructor(options) {
-        this.aliasGenerator = new AliasGenerator();
         this.query1 = options.query1;
         this.query2 = options.query2;
         this.joinType = options.joinType;
-        this.aliasGenerator = options.aliasGenerator || new AliasGenerator();
-    }
-    alias(fields) {
-        return new JoinWithFieldsBuilder({
-            query1: this.query1,
-            query2: this.query2,
-            joinBuilder: this,
-            selectedFields: fields,
-        });
+        this.outputOptions = options.outputOptions;
     }
     // Original on() method for immediate join without field selection
     on(condition) {
@@ -537,23 +552,44 @@ class JoinBuilder {
             query1: this.query1,
             query2: this.query2,
             join: this,
-            aliasGenerator: this.aliasGenerator,
+            outputOptions: this.outputOptions,
         });
     }
+}
+
+class QueryBuilder {
+    constructor(options) {
+        this.tableName = options.tableName;
+        this.tableAlias = options.tableAlias;
+    }
+    select(fields) {
+        return new SelectBuilder(this, fields);
+    }
     join(tableName, tableAlias) {
-        // Create a new join where the left side is the joined table (U)
         if (typeof tableName === "string") {
-            const newQuery = new QueryBuilder({ tableName, tableAlias, aliasGenerator: this.aliasGenerator });
-            return new JoinBuilder({ query1: this.query2, query2: newQuery, joinType: "INNER", aliasGenerator: this.aliasGenerator });
+            const newQuery = new QueryBuilder({
+                tableName,
+                tableAlias,
+            });
+            return new JoinBuilder({
+                query1: this,
+                query2: newQuery,
+                joinType: "INNER",
+                outputOptions: { includeTerminator: true },
+            });
         }
         else {
             // Handle subquery case - create a QueryBuilder that wraps the subquery
             const newQuery = new QueryBuilder({
-                tableName: `(${tableName.toString()})`,
-                tableAlias: tableAlias,
-                aliasGenerator: this.aliasGenerator,
+                tableName: `(${tableName.toString({ includeTerminator: false })})`,
+                tableAlias,
             });
-            return new JoinBuilder({ query1: this.query2, query2: newQuery, joinType: "INNER", aliasGenerator: this.aliasGenerator });
+            return new JoinBuilder({
+                query1: this,
+                query2: newQuery,
+                joinType: "INNER",
+                outputOptions: { includeTerminator: true },
+            });
         }
     }
     innerJoin(tableName, tableAlias) {
@@ -561,86 +597,55 @@ class JoinBuilder {
     }
     leftJoin(tableName, tableAlias) {
         if (typeof tableName === "string") {
-            const newQuery = new QueryBuilder({ tableName, tableAlias, aliasGenerator: this.aliasGenerator });
-            return new JoinBuilder({ query1: this.query2, query2: newQuery, joinType: "LEFT", aliasGenerator: this.aliasGenerator });
+            const newQuery = new QueryBuilder({
+                tableName,
+                tableAlias,
+            });
+            return new JoinBuilder({
+                query1: this,
+                query2: newQuery,
+                joinType: "LEFT",
+                outputOptions: { includeTerminator: true },
+            });
         }
         else {
             // Handle subquery case - create a QueryBuilder that wraps the subquery
             const newQuery = new QueryBuilder({
-                tableName: `(${tableName.toString()})`,
-                tableAlias: tableAlias,
-                aliasGenerator: this.aliasGenerator,
+                tableName: `(${tableName.toString({ includeTerminator: false })})`,
+                tableAlias,
             });
-            return new JoinBuilder({ query1: this.query2, query2: newQuery, joinType: "LEFT", aliasGenerator: this.aliasGenerator });
-        }
-    }
-}
-
-class QueryBuilder {
-    constructor(options) {
-        this.aliasGenerator = options.aliasGenerator;
-        this.tableName = options.tableName;
-        this.tableAlias = options.tableAlias || this.aliasGenerator.generate();
-    }
-    select(fields) {
-        return new SelectBuilder(this, fields);
-    }
-    join(tableName, tableAlias) {
-        if (typeof tableName === "string") {
-            const newQuery = new QueryBuilder({ tableName, tableAlias, aliasGenerator: this.aliasGenerator });
-            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "INNER" });
-        }
-        else {
-            // Handle subquery case - create a QueryBuilder that wraps the subquery
-            const newQuery = new QueryBuilder({
-                tableName: `(${tableName.toString()})`,
-                aliasGenerator: this.aliasGenerator,
+            return new JoinBuilder({
+                query1: this,
+                query2: newQuery,
+                joinType: "LEFT",
+                outputOptions: { includeTerminator: true },
             });
-            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "INNER" });
-        }
-    }
-    innerJoin(entity, alias) {
-        return this.join(entity, alias);
-    }
-    leftJoin(tableName, tableAlias) {
-        if (typeof tableName === "string") {
-            const newQuery = new QueryBuilder({ tableName, tableAlias, aliasGenerator: this.aliasGenerator });
-            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "LEFT" });
-        }
-        else {
-            // Handle subquery case - create a QueryBuilder that wraps the subquery
-            const newQuery = new QueryBuilder({
-                tableName: `(${tableName.toString()})`,
-                aliasGenerator: this.aliasGenerator,
-            });
-            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "LEFT" });
         }
     }
     where(conditions) {
-        return new WhereBuilder({ query: this, conditions, orConditions: [], aliasGenerator: this.aliasGenerator });
+        return new WhereBuilder({ query: this, conditions, orConditions: [] });
     }
     orderBy(field, direction = "ASC") {
-        return new OrderByBuilder({ query: this, field, direction, aliasGenerator: this.aliasGenerator });
+        return new OrderByBuilder({ query: this, field, direction });
     }
     limit(count, offset) {
-        return new LimitBuilder({ query: this, limit: count, offset, aliasGenerator: this.aliasGenerator });
+        return new LimitBuilder({ query: this, limit: count, offset });
     }
-    toString() {
-        return this.select(["*"]).toString();
+    toString(options) {
+        return this.select(["*"]).toString(options);
     }
 }
 
 // Main entry point for ts-query package
 function from(tableName, tableAlias) {
     if (typeof tableName === "string") {
-        return new QueryBuilder({ tableName, tableAlias, aliasGenerator: new AliasGenerator() });
+        return new QueryBuilder({ tableName, tableAlias });
     }
     else {
         // Handle subquery case - create a QueryBuilder that wraps the subquery
         return new QueryBuilder({
-            tableName: `(${tableName.toString()})`,
-            tableAlias: tableAlias || new AliasGenerator().generate(),
-            aliasGenerator: new AliasGenerator(),
+            tableName: `(${tableName.toString({ includeTerminator: false })})`,
+            tableAlias: tableAlias,
         });
     }
 }

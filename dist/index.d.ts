@@ -2,32 +2,16 @@ type FieldAliasMapping<T extends FieldsBase, R extends FieldsBase> = {
     [K in keyof T]?: keyof R;
 };
 interface Select<T extends FieldsBase> extends Queryable<T> {
-    select(fields: Array<FieldsWithStar<T> | Partial<Record<FieldsWithStar<T>, string>>>): Select<T>;
-    select(fields: Partial<Record<FieldsWithStar<T>, string>>): Select<T>;
+    select(fields: Array<FieldsWithStar<T> | Partial<Record<FieldsWithStar<T>, string | true>>>): Select<T>;
+    select(fields: Partial<Record<FieldsWithStar<T>, string | true>>): Select<T>;
     select<R extends FieldsBase>(fields: FieldAliasMapping<T, R>): Select<R>;
     select<R extends FieldsBase>(fields: Array<keyof T | FieldAliasMapping<T, R>>): Select<R>;
-    toString(): string;
+    toString(options?: OutputOptions): string;
 }
 
 type JoinType = "INNER" | "LEFT";
-type FieldMap<T> = {
-    [k: string]: keyof T;
-};
-interface Joinable<TBase extends FieldsBase> {
-    join<U extends FieldsBase = never>(tableName: string, tableAlias?: string): Join<TBase, U>;
-    innerJoin<U extends FieldsBase>(tableName: string, tableAlias?: string): Join<TBase, U>;
-    leftJoin<U extends FieldsBase>(tableName: string, tableAlias?: string): Join<TBase, U>;
-    join<U extends FieldsBase>(subquery: AnyQueryable<U>, alias?: string): Join<TBase, U>;
-    innerJoin<U extends FieldsBase>(subquery: AnyQueryable<U>, alias?: string): Join<TBase, U>;
-    leftJoin<U extends FieldsBase>(subquery: AnyQueryable<U>, alias?: string): Join<TBase, U>;
-}
-interface Join<TBase extends FieldsBase, TOther extends FieldsBase> extends Joinable<TOther> {
-    alias(fields: Array<keyof TOther>): JoinWithFields<TBase, TOther, TOther>;
-    alias<V extends FieldMap<TOther>>(fields: V): JoinWithFields<TBase, TOther, V>;
-    on(condition: Partial<Record<keyof TBase, keyof TOther>>): Query<TBase & TOther>;
-}
-interface JoinWithFields<TMain extends FieldsBase, TJoined extends FieldsBase, TMapped extends FieldsBase = TJoined> {
-    on(condition: Partial<Record<keyof TMain, keyof TJoined>>): Query<TMain & TMapped>;
+interface Join<T extends FieldsBase, U extends FieldsBase> {
+    on(condition: Partial<Record<keyof T, keyof U>>): Query<T & U>;
 }
 
 interface Limit<T extends FieldsBase> extends Select<T> {
@@ -40,9 +24,10 @@ interface OrderBy<T extends FieldsBase> extends Select<T> {
     limit(count: number, offset?: number): Limit<T>;
 }
 
+type AnyNull<T> = T extends null | undefined ? T | null | undefined : T;
 type Condition<T extends FieldsBase> = {
-    [K in keyof T]?: T[K] | {
-        $eq: T[K];
+    [K in keyof T]?: AnyNull<T[K]> | {
+        $eq: AnyNull<T[K]>;
     } | {
         $gt: T[K];
     } | {
@@ -52,7 +37,7 @@ type Condition<T extends FieldsBase> = {
     } | {
         $lte: T[K];
     } | {
-        $ne: T[K];
+        $ne: AnyNull<T[K]>;
     } | {
         $in: T[K][];
     } | {
@@ -75,11 +60,24 @@ interface Where<T extends FieldsBase> extends Query<T>, Queryable<T> {
 
 type FieldsBase = {};
 type FieldsWithStar<T> = keyof T | "*";
+type AliasedFields<TAlias extends string | undefined, U extends FieldsBase> = TAlias extends undefined ? U : {
+    [K in keyof U as `${TAlias}.${K & string}`]: U[K];
+};
+type OutputOptions = {
+    format?: "indented" | "compact";
+    includeTerminator?: boolean;
+};
 interface Queryable<T = never> {
-    toString(): string;
+    toString(options?: OutputOptions): string;
 }
 type AnyQueryable<T extends FieldsBase> = Limit<T> | Where<T> | OrderBy<T> | Select<T> | Join<any, T> | Query<T>;
-interface Query<TQuery extends FieldsBase, TBase extends FieldsBase = TQuery> extends Select<TQuery>, Joinable<TBase>, Queryable<TQuery> {
+interface Query<TQuery extends FieldsBase> extends Select<TQuery>, Queryable<TQuery> {
+    join<TOther extends FieldsBase, TAlias extends string>(tableName: string, tableAlias: TAlias): Join<TQuery, AliasedFields<TAlias, TOther>>;
+    join<TOther extends FieldsBase, TAlias extends string>(subquery: AnyQueryable<TOther>, tableAlias: TAlias): Join<TQuery, AliasedFields<TAlias, TOther>>;
+    innerJoin<TOther extends FieldsBase, TAlias extends string>(subquery: AnyQueryable<TOther>, alias: TAlias): Join<TQuery, AliasedFields<TAlias, TOther>>;
+    innerJoin<TOther extends FieldsBase, TAlias extends string>(tableName: string, tableAlias: TAlias): Join<TQuery, AliasedFields<TAlias, TOther>>;
+    leftJoin<TOther extends FieldsBase, TAlias extends string>(subquery: AnyQueryable<TOther>, alias: TAlias): Join<TQuery, AliasedFields<TAlias, TOther>>;
+    leftJoin<TOther extends FieldsBase, TAlias extends string>(tableName: string, tableAlias: TAlias): Join<TQuery, AliasedFields<TAlias, TOther>>;
     where(conditions: WhereCondition<TQuery>): Where<TQuery>;
     orderBy(field: keyof TQuery, direction?: OrderDirection): OrderBy<TQuery>;
     limit(count: number, offset?: number): Limit<TQuery>;
@@ -88,11 +86,13 @@ type WhereCondition<T extends FieldsBase> = Condition<T> & {
     or?: Array<Condition<T>>;
 };
 
-declare function from<T extends FieldsBase>(tableName: string, tableAlias?: string): Query<T>;
-declare function from<T extends FieldsBase>(subquery: AnyQueryable<T>, tableAlias?: string): Query<T>;
+declare function from<T extends FieldsBase, TAlias extends string>(tableName: string, tableAlias: TAlias): Query<AliasedFields<TAlias, T>>;
+declare function from<T extends FieldsBase>(tableName: string): Query<AliasedFields<undefined, T>>;
+declare function from<T extends FieldsBase, TAlias extends string>(subquery: AnyQueryable<T>, tableAlias: TAlias): Query<AliasedFields<TAlias, T>>;
+declare function from<T extends FieldsBase>(subquery: AnyQueryable<T>): Query<AliasedFields<undefined, T>>;
 declare const queryBuilder: {
     from: typeof from;
 };
 
 export { queryBuilder };
-export type { Condition, Join, JoinType, Limit, OrCondition, OrderBy, OrderDirection, Query, Select, FieldsBase as TableFieldsBase, Where, WhereCondition };
+export type { Condition, FieldsBase, Join, JoinType, Limit, OrCondition, OrderBy, OrderDirection, Query, Select, Where, WhereCondition };

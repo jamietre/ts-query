@@ -3,7 +3,7 @@ import { QueryBuilder } from "./queryBuilder.js";
 import { WhereBuilder } from "./whereBuilder.js";
 import { LimitBuilder } from "./limitBuilder.js";
 import { OrderByBuilder } from "./orderByBuilder.js";
-import type { Queryable, FieldsBase, FieldsWithStar } from "./types/query.js";
+import type { Queryable, FieldsBase, FieldsWithStar, OutputOptions } from "./types/query.js";
 import type { Select, FieldAliasMapping } from "./types/select.js";
 
 export class SelectBuilder<T extends FieldsBase> implements Select<T> {
@@ -195,7 +195,8 @@ export class SelectBuilder<T extends FieldsBase> implements Select<T> {
             return this.formatCondition(key, value, tableAlias);
           })
           .join(" AND ");
-        return `(${orClauses})`;
+        // Only wrap in parentheses if there are multiple clauses
+        return Object.entries(orCondition).length > 1 ? `(${orClauses})` : orClauses;
       });
 
       // Handle chained OR conditions
@@ -206,7 +207,8 @@ export class SelectBuilder<T extends FieldsBase> implements Select<T> {
             return this.formatCondition(key, value, tableAlias);
           })
           .join(" AND ");
-        return `(${orClauses})`;
+        // Only wrap in parentheses if there are multiple clauses
+        return Object.entries(orCondition.conditions).length > 1 ? `(${orClauses})` : orClauses;
       });
 
       // Combine all OR conditions
@@ -214,9 +216,14 @@ export class SelectBuilder<T extends FieldsBase> implements Select<T> {
 
       let allConditions = conditions;
       if (allOrConditions.length > 0) {
-        allConditions = allConditions
-          ? `(${allConditions}) OR ${allOrConditions.join(" OR ")}`
-          : allOrConditions.join(" OR ");
+        if (allConditions) {
+          // Only wrap main conditions in parentheses if there are multiple main conditions
+          const mainConditionsCount = Object.keys(mainConditions).length;
+          const wrappedMainConditions = mainConditionsCount > 1 ? `(${allConditions})` : allConditions;
+          allConditions = `${wrappedMainConditions} OR ${allOrConditions.join(" OR ")}`;
+        } else {
+          allConditions = allOrConditions.join(" OR ");
+        }
       }
 
       const nestedWhere = this.getWhereClause(query.query);
@@ -312,7 +319,7 @@ export class SelectBuilder<T extends FieldsBase> implements Select<T> {
     return String(value);
   }
 
-  toString() {
+  toString(options?: OutputOptions): string {
     // Handle regular field selection
     // When it's mapped from { key: value } the actual output name (the alias) is the key
     const hasJoins = this.queryHasJoins(this.query);
@@ -362,6 +369,6 @@ export class SelectBuilder<T extends FieldsBase> implements Select<T> {
     if (limitClause) {
       sql += ` ${limitClause}`;
     }
-    return sql;
+    return (options?.includeTerminator ?? true) ? sql + ';' : sql;
   }
 }

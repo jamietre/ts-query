@@ -26,7 +26,7 @@ describe("JOIN functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT g.game_id AS id, g.game_name AS name, d.description AS desc FROM games g INNER JOIN developers d ON g.game_id = d.game_id",
+      "SELECT g.game_id AS id, g.game_name AS name, d.description AS desc FROM games g INNER JOIN developers d ON g.game_id = d.game_id;",
     );
   });
 
@@ -43,7 +43,7 @@ describe("JOIN functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT g.game_id AS id, g.game_name AS name, d.description AS desc FROM games g INNER JOIN developers d ON g.game_id = d.game_id",
+      "SELECT g.game_id AS id, g.game_name AS name, d.description AS desc FROM games g INNER JOIN developers d ON g.game_id = d.game_id;",
     );
   });
 
@@ -55,7 +55,7 @@ describe("JOIN functionality", () => {
       .select(["g.game_id"]);
 
     const sql = query.toString();
-    expect(sql).toBe("SELECT g.game_id FROM games g LEFT JOIN developers d ON g.game_id = d.game_id");
+    expect(sql).toBe("SELECT g.game_id FROM games g LEFT JOIN developers d ON g.game_id = d.game_id;");
   });
 
   it("should handle multiple INNER JOINs", () => {
@@ -74,7 +74,7 @@ describe("JOIN functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT g.game_id AS id, g.game_name AS name, d.description AS desc, p.publisher_name AS publisher FROM games g INNER JOIN developers d ON g.game_id = d.game_id INNER JOIN publishers p ON d.game_id = p.game_id",
+      "SELECT g.game_id AS id, g.game_name AS name, d.description AS desc, p.publisher_name AS publisher FROM games g INNER JOIN developers d ON g.game_id = d.game_id INNER JOIN publishers p ON d.game_id = p.game_id;",
     );
   });
 
@@ -94,7 +94,7 @@ describe("JOIN functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT g.game_id AS id, g.game_name AS name, d.description AS desc, p.publisher_name AS publisher FROM games g INNER JOIN developers d ON g.game_id = d.game_id LEFT JOIN publishers p ON d.game_id = p.game_id",
+      "SELECT g.game_id AS id, g.game_name AS name, d.description AS desc, p.publisher_name AS publisher FROM games g INNER JOIN developers d ON g.game_id = d.game_id LEFT JOIN publishers p ON d.game_id = p.game_id;",
     );
   });
 
@@ -112,7 +112,7 @@ describe("JOIN functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT g.game_id AS id, g.game_name AS name, d.description AS desc FROM games g INNER JOIN developers d ON g.game_id = d.game_id WHERE g.game_id = 1",
+      "SELECT g.game_id AS id, g.game_name AS name, d.description AS desc FROM games g INNER JOIN developers d ON g.game_id = d.game_id WHERE g.game_id = 1;",
     );
   });
 
@@ -131,7 +131,7 @@ describe("JOIN functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT g.game_id AS id, g.game_name AS name, d.description AS desc FROM games g INNER JOIN developers d ON g.game_id = d.game_id WHERE (g.game_id = 1) OR (d.description LIKE '%indie%')",
+      "SELECT g.game_id AS id, g.game_name AS name, d.description AS desc FROM games g INNER JOIN developers d ON g.game_id = d.game_id WHERE g.game_id = 1 OR d.description LIKE '%indie%';",
     );
   });
 
@@ -152,7 +152,7 @@ describe("JOIN functionality", () => {
     const sql2 = query2.toString();
 
     expect(sql1).toBe(sql2);
-    expect(sql1).toBe("SELECT g.game_id, g.game_name FROM games g INNER JOIN developers d ON g.game_id = d.game_id");
+    expect(sql1).toBe("SELECT g.game_id, g.game_name FROM games g INNER JOIN developers d ON g.game_id = d.game_id;");
   });
 
   it("should handle multiple join conditions", () => {
@@ -176,7 +176,7 @@ describe("JOIN functionality", () => {
     expect(sql).toBe(
       "SELECT g.game_id AS id, g.game_name AS name, gd.description AS desc, d.founded_year FROM games g " +
         "LEFT JOIN game_developers gd ON g.game_id = gd.game_id LEFT JOIN " +
-        "(SELECT name AS developer_name FROM developers) d ON gd.developer_id = d.id",
+        "(SELECT name AS developer_name FROM developers) d ON gd.developer_id = d.id;",
     );
   });
 
@@ -197,7 +197,7 @@ describe("JOIN functionality", () => {
 
     const sql = query.toString();
     expect(sql).toBe(
-      "SELECT g.game_id AS id, g.game_name AS name, pl.platform_name AS platform FROM games g LEFT JOIN developers d ON g.game_id = d.game_id LEFT JOIN publishers p ON d.game_id = p.game_id LEFT JOIN platforms pl ON p.game_id = pl.game_id",
+      "SELECT g.game_id AS id, g.game_name AS name, pl.platform_name AS platform FROM games g LEFT JOIN developers d ON g.game_id = d.game_id LEFT JOIN publishers p ON d.game_id = p.game_id LEFT JOIN platforms pl ON p.game_id = pl.game_id;",
     );
   });
 
@@ -221,7 +221,7 @@ describe("JOIN functionality", () => {
 
       const sql = query.toString();
       expect(sql).toBe(
-        "SELECT t1.game_id, t1.game_name AS g_name FROM games t1 INNER JOIN games2 t2 ON t1.game_id = t2.game_id",
+        "SELECT t1.game_id, t1.game_name AS g_name FROM games t1 INNER JOIN games2 t2 ON t1.game_id = t2.game_id;",
       );
     });
   });
@@ -242,7 +242,7 @@ describe("JOIN functionality", () => {
 
       const sql = query.toString();
       expect(sql).toBe(
-        "SELECT g.name AS name, g.id AS id, d.founded_year AS founded_year, g.release_year AS release_year FROM games g INNER JOIN developers d ON g.id = d.id",
+        "SELECT g.name AS name, g.id AS id, d.founded_year AS founded_year, g.release_year AS release_year FROM games g INNER JOIN developers d ON g.id = d.id;",
       );
     });
 
@@ -260,7 +260,7 @@ describe("JOIN functionality", () => {
 
       const sql = query.toString();
       expect(sql).toBe(
-        "SELECT g.name, d.founded_year, g.release_year FROM games g INNER JOIN developers d ON g.id = d.id",
+        "SELECT g.name, d.founded_year, g.release_year FROM games g INNER JOIN developers d ON g.id = d.id;",
       );
     });
 
@@ -273,7 +273,7 @@ describe("JOIN functionality", () => {
         .select(["g.name", "g.release_year"]);
 
       const sql = query.toString();
-      expect(sql).toBe("SELECT g.name, g.release_year FROM games g INNER JOIN developers d ON g.id = d.id");
+      expect(sql).toBe("SELECT g.name, g.release_year FROM games g INNER JOIN developers d ON g.id = d.id;");
     });
 
     it("should support both join patterns", () => {
@@ -286,7 +286,7 @@ describe("JOIN functionality", () => {
 
       const sql1 = traditionalQuery.toString();
 
-      expect(sql1).toBe("SELECT g.name FROM games g INNER JOIN developers d ON g.id = d.id");
+      expect(sql1).toBe("SELECT g.name FROM games g INNER JOIN developers d ON g.id = d.id;");
     });
 
     it("should support type-safe field mapping with FieldMap", () => {
@@ -303,7 +303,7 @@ describe("JOIN functionality", () => {
 
       const sql = query.toString();
       expect(sql).toBe(
-        "SELECT g.name AS name, g.release_year AS release_year, d.created_at AS created_date FROM games g INNER JOIN developers d ON g.id = d.id",
+        "SELECT g.name AS name, g.release_year AS release_year, d.created_at AS created_date FROM games g INNER JOIN developers d ON g.id = d.id;",
       );
     });
   });
