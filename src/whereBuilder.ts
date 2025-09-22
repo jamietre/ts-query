@@ -3,12 +3,14 @@ import { SelectBuilder } from "./selectBuilder.js";
 import { JoinBuilder } from "./joinBuilder.js";
 import { LimitBuilder } from "./limitBuilder.js";
 import { OrderByBuilder } from "./orderByBuilder.js";
+import { CaseBuilder } from "./caseBuilder.js";
 import type { Query, WhereCondition, Queryable, FieldsBase, FieldsWithStar, OutputOptions } from "./types/query.js";
 import type { Select, FieldAliasMapping } from "./types/select.js";
 import type { Join } from "./types/join.js";
 import type { Limit } from "./types/limit.js";
 import type { Where, Condition, OrCondition } from "./types/where.js";
 import type { OrderBy, OrderDirection } from "./types/orderBy.js";
+import type { Case } from "./types/case.js";
 
 export class WhereBuilder<T extends FieldsBase> implements Where<T> {
   readonly query: Query<T>;
@@ -27,6 +29,16 @@ export class WhereBuilder<T extends FieldsBase> implements Where<T> {
   select<R extends FieldsBase>(fields: Array<keyof T | FieldAliasMapping<T, R>>): Select<R>;
   select(fields: any): any {
     return new SelectBuilder(this, fields);
+  }
+
+  case(): Case<T> {
+    return new CaseBuilder<T>(this.query);
+  }
+
+  selectAny<R extends FieldsBase>(fields: { [K in string]: keyof R }): Select<R>;
+  selectAny<R extends FieldsBase>(fields: Array<string>): Select<R>;
+  selectAny<R extends FieldsBase>(fields: any): Select<R> {
+    return new SelectBuilder<R>(this as any, {}).selectAny(fields);
   }
 
   join<U extends FieldsBase, TAlias extends string>(tableName: string | Queryable<U>, tableAlias: TAlias): Join<T, U> {

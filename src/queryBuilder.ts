@@ -3,12 +3,14 @@ import { SelectBuilder } from "./selectBuilder.js";
 import { WhereBuilder } from "./whereBuilder.js";
 import { OrderByBuilder } from "./orderByBuilder.js";
 import { LimitBuilder } from "./limitBuilder.js";
+import { CaseBuilder } from "./caseBuilder.js";
 import type { Query, WhereCondition, Queryable, FieldsBase, FieldsWithStar, AliasedFields, OutputOptions } from "./types/query.js";
 import type { Join } from "./types/join.js";
 import type { Select, FieldAliasMapping } from "./types/select.js";
 import type { Where } from "./types/where.js";
 import type { OrderBy, OrderDirection } from "./types/orderBy.js";
 import type { Limit } from "./types/limit.js";
+import type { Case } from "./types/case.js";
 
 export class QueryBuilder<TQuery extends FieldsBase> implements Query<TQuery> {
   readonly tableName: string;
@@ -25,6 +27,17 @@ export class QueryBuilder<TQuery extends FieldsBase> implements Query<TQuery> {
   select<R extends FieldsBase>(fields: Array<keyof TQuery | FieldAliasMapping<TQuery, R>>): Select<R>;
   select(fields: any): any {
     return new SelectBuilder(this, fields);
+  }
+
+  case(): Case<TQuery> {
+    return new CaseBuilder<TQuery>(this);
+  }
+
+  selectAny<R extends FieldsBase>(fields: { [K in string]: keyof R }): Select<R>;
+  selectAny<R extends FieldsBase>(fields: Array<string>): Select<R>;
+  selectAny<R extends FieldsBase>(fields: any): Select<R> {
+    // Start with empty select and add arbitrary fields
+    return new SelectBuilder<R>(this as any, {}).selectAny(fields);
   }
 
   join<TOther extends FieldsBase, TAlias extends string>(

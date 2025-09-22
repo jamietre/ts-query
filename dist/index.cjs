@@ -1,5 +1,144 @@
 'use strict';
 
+// Helper function to create field references
+function field(name) {
+    return { field: name };
+}
+class CaseBuilder {
+    constructor(sourceQuery) {
+        this.clauses = [];
+        this.sourceQuery = sourceQuery;
+    }
+    when(condition) {
+        return new WhenBuilder(this, condition);
+    }
+    else(value) {
+        this.elseValue = value;
+        return this;
+    }
+    endAs(alias) {
+        this.aliasName = alias;
+        return this;
+    }
+    addClause(condition, thenValue) {
+        this.clauses.push({ condition, thenValue });
+    }
+    // Add select method to make this behave like a complete query builder
+    select(fields) {
+        if (!this.sourceQuery) {
+            throw new Error("Cannot create SELECT query without source query");
+        }
+        const caseExpression = this.getCaseExpression();
+        return this.sourceQuery.select([...fields, { [caseExpression]: true }]);
+    }
+    toString(options) {
+        // Generate a complete SELECT statement like other query builders
+        if (this.sourceQuery) {
+            const caseExpression = this.getCaseExpression();
+            return this.sourceQuery.select([{ [caseExpression]: true }]).toString(options);
+        }
+        // Fallback to just the CASE expression if no source query
+        return this.getCaseExpression();
+    }
+    // Method to get just the CASE expression when needed for field selection
+    getExpression() {
+        return this.getCaseExpression();
+    }
+    // Method to get just the CASE expression (for internal use)
+    getCaseExpression() {
+        if (this.clauses.length === 0) {
+            throw new Error("CASE statement must have at least one WHEN clause");
+        }
+        const whenClauses = this.clauses
+            .map((clause) => {
+            const conditionStr = this.formatCondition(clause.condition);
+            const thenStr = this.formatValue(clause.thenValue);
+            return `WHEN ${conditionStr} THEN ${thenStr}`;
+        })
+            .join(" ");
+        let caseStr = `CASE ${whenClauses}`;
+        if (this.elseValue !== undefined) {
+            caseStr += ` ELSE ${this.formatValue(this.elseValue)}`;
+        }
+        caseStr += " END";
+        if (this.aliasName) {
+            caseStr += ` AS ${this.aliasName}`;
+        }
+        return caseStr;
+    }
+    formatCondition(condition) {
+        // Handle the condition object similar to how WhereBuilder formats conditions
+        const entries = Object.entries(condition);
+        if (entries.length === 0) {
+            throw new Error("Condition cannot be empty");
+        }
+        return entries
+            .map(([field, value]) => {
+            if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+                // Handle operators like $gt, $lt, etc.
+                const operatorEntries = Object.entries(value);
+                if (operatorEntries.length > 0) {
+                    const [operator, operatorValue] = operatorEntries[0];
+                    switch (operator) {
+                        case "$eq":
+                            return value == undefined ? `${field} IS NULL` : `${field} = ${this.formatValue(operatorValue)}`;
+                        case "$gt":
+                            return `${field} > ${this.formatValue(operatorValue)}`;
+                        case "$lt":
+                            return `${field} < ${this.formatValue(operatorValue)}`;
+                        case "$gte":
+                            return `${field} >= ${this.formatValue(operatorValue)}`;
+                        case "$lte":
+                            return `${field} <= ${this.formatValue(operatorValue)}`;
+                        case "$ne":
+                            return operatorValue == undefined
+                                ? `${field} IS NOT NULL`
+                                : `${field} != ${this.formatValue(operatorValue)}`;
+                        case "$in":
+                            const inValues = Array.isArray(operatorValue)
+                                ? operatorValue.map((v) => this.formatValue(v)).join(", ")
+                                : this.formatValue(operatorValue);
+                            return `${field} IN (${inValues})`;
+                        case "$like":
+                            return `${field} LIKE ${this.formatValue(operatorValue)}`;
+                        default:
+                            return `${field} = ${this.formatValue(operatorValue)}`;
+                    }
+                }
+            }
+            // Handle null/undefined values
+            if (value == undefined) {
+                return `${field} IS NULL`;
+            }
+            return `${field} = ${this.formatValue(value)}`;
+        })
+            .join(" AND ");
+    }
+    formatValue(value) {
+        if (value === null || value === undefined) {
+            return "NULL";
+        }
+        if (typeof value === "object" && value !== null && "field" in value) {
+            // Field reference object
+            return String(value.field);
+        }
+        if (typeof value === "string") {
+            return `'${value}'`; // String literal, with quotes
+        }
+        return String(value);
+    }
+}
+class WhenBuilder {
+    constructor(caseBuilder, condition) {
+        this.caseBuilder = caseBuilder;
+        this.condition = condition;
+    }
+    then(value) {
+        this.caseBuilder.addClause(this.condition, value);
+        return this.caseBuilder;
+    }
+}
+
 class LimitBuilder {
     constructor(options) {
         this.query = options.query;
@@ -15,6 +154,12 @@ class LimitBuilder {
     }
     select(fields) {
         return new SelectBuilder(this, fields);
+    }
+    case() {
+        return new CaseBuilder(this.query);
+    }
+    selectAny(fields) {
+        return new SelectBuilder(this.query, {}).selectAny(fields);
     }
     toString(options) {
         return this.select(["*"]).toString(options);
@@ -40,6 +185,12 @@ class OrderByBuilder {
     select(fields) {
         return new SelectBuilder(this, fields);
     }
+    case() {
+        return new CaseBuilder(this.query);
+    }
+    selectAny(fields) {
+        return new SelectBuilder(this.query, {}).selectAny(fields);
+    }
     limit(count, offset) {
         return new LimitBuilder({ query: this.query, limit: count, offset });
     }
@@ -57,6 +208,12 @@ class WhereBuilder {
     }
     select(fields) {
         return new SelectBuilder(this, fields);
+    }
+    case() {
+        return new CaseBuilder(this.query);
+    }
+    selectAny(fields) {
+        return new SelectBuilder(this, {}).selectAny(fields);
     }
     join(tableName, tableAlias) {
         if (typeof tableName === "string") {
@@ -156,6 +313,27 @@ class SelectBuilder {
     }
     select(fields) {
         return new SelectBuilder(this.query, fields);
+    }
+    selectAny(fields) {
+        // Create a new SelectBuilder that combines current fields with the arbitrary fields
+        const newBuilder = new SelectBuilder(this.query, this.fields);
+        if (Array.isArray(fields)) {
+            // Handle array of raw SQL expressions
+            fields.forEach((expression) => {
+                // Use the expression as both key and value (no alias)
+                newBuilder.fields[expression] = expression;
+            });
+        }
+        else if (fields && typeof fields === "object") {
+            // Handle object mapping { expression: alias }
+            Object.entries(fields).forEach(([expression, alias]) => {
+                newBuilder.fields[expression] = alias;
+            });
+        }
+        return newBuilder;
+    }
+    case() {
+        return new CaseBuilder(this.query);
     }
     getJoinSource(query) {
         if (query instanceof QueryBuilder) {
@@ -495,10 +673,21 @@ class CompoundQueryBuilder {
     select(fields) {
         return new SelectBuilder(this, fields);
     }
+    case() {
+        return new CaseBuilder(this);
+    }
+    selectAny(fields) {
+        return new SelectBuilder(this, {}).selectAny(fields);
+    }
     join(target, tableAlias) {
         if (typeof target === "string") {
             const newQuery = new QueryBuilder({ tableName: target, tableAlias });
-            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "INNER", outputOptions: this.outputOptions });
+            return new JoinBuilder({
+                query1: this,
+                query2: newQuery,
+                joinType: "INNER",
+                outputOptions: this.outputOptions,
+            });
         }
         else {
             // Handle subquery case - create a QueryBuilder that wraps the subquery
@@ -506,7 +695,12 @@ class CompoundQueryBuilder {
                 tableName: `(${target.toString({ ...this.outputOptions, includeTerminator: false })})`,
                 tableAlias: tableAlias,
             });
-            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "INNER", outputOptions: this.outputOptions });
+            return new JoinBuilder({
+                query1: this,
+                query2: newQuery,
+                joinType: "INNER",
+                outputOptions: this.outputOptions,
+            });
         }
     }
     innerJoin(tableName, tableAlias) {
@@ -515,7 +709,12 @@ class CompoundQueryBuilder {
     leftJoin(tableName, tableAlias) {
         if (typeof tableName === "string") {
             const newQuery = new QueryBuilder({ tableName, tableAlias });
-            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "LEFT", outputOptions: this.outputOptions });
+            return new JoinBuilder({
+                query1: this,
+                query2: newQuery,
+                joinType: "LEFT",
+                outputOptions: this.outputOptions,
+            });
         }
         else {
             // Handle subquery case - create a QueryBuilder that wraps the subquery
@@ -523,7 +722,12 @@ class CompoundQueryBuilder {
                 tableName: `(${tableName.toString({ ...this.outputOptions, includeTerminator: false })})`,
                 tableAlias: tableAlias,
             });
-            return new JoinBuilder({ query1: this, query2: newQuery, joinType: "LEFT", outputOptions: this.outputOptions });
+            return new JoinBuilder({
+                query1: this,
+                query2: newQuery,
+                joinType: "LEFT",
+                outputOptions: this.outputOptions,
+            });
         }
     }
     where(conditions) {
@@ -566,6 +770,13 @@ class QueryBuilder {
     }
     select(fields) {
         return new SelectBuilder(this, fields);
+    }
+    case() {
+        return new CaseBuilder(this);
+    }
+    selectAny(fields) {
+        // Start with empty select and add arbitrary fields
+        return new SelectBuilder(this, {}).selectAny(fields);
     }
     join(tableName, tableAlias) {
         if (typeof tableName === "string") {
@@ -656,5 +867,6 @@ const queryBuilder = {
     from,
 };
 
+exports.field = field;
 exports.queryBuilder = queryBuilder;
 //# sourceMappingURL=index.cjs.map

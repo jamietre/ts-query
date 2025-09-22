@@ -9,6 +9,8 @@ query are as expected if you want.
 
 # Features
 
+Supports making SELECT queries.
+
 - **Zero Dependencies** - No external dependencies, pure TypeScript
 - **Database Agnostic** - Works with any database connection library (pg, mysql2, sqlite3, etc.)
 - **Full Type Safety** - TypeScript interfaces with complete IntelliSense support
@@ -21,6 +23,23 @@ query are as expected if you want.
 - **Ordering & Pagination** - ORDER BY clauses with multiple fields and LIMIT/OFFSET
 - **Subquery Support** - Full subquery support as table sources
 - **Standard SQL Output** - Generates clean, readable SQL compatible with most databases
+
+
+# Limitations
+
+There are many, but for a lot of use cases involving SELECT queries it should work well. 
+
+- Using functions or selecting anything that's not a known field from your input types is supported with `selectAny`. Hope to improve this in the future to support templating of actual field names within known functions
+- You can't use CASE as part of anything but a select; make this allowable for ORDER BY, etc
+
+
+
+# Roadmap
+
+- Add support for INSERT, UPDATE, DELETE, UNION, GROUP BY, HAVING, etc
+- Add support for functions using templated strings
+- Dig into the AI generated code and look for improvement opportunities
+- Organize tests better; make specs; remove repetition
 
 # Usage
 

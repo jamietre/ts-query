@@ -15,6 +15,11 @@ export interface Select<TQuery extends FieldsBase> extends Queryable<TQuery> {
   // Type-safe field aliasing with explicit target type
   select<R extends FieldsBase>(fields: FieldAliasMapping<TQuery, R>): Select<R>;
   select<R extends FieldsBase>(fields: Array<keyof TQuery | FieldAliasMapping<TQuery, R>>): Select<R>;
+  /**
+   * Arbitary select overload for things not yet supported (e.g. functions)
+   */
+  selectAny<R extends FieldsBase>(fields: { [K in string]: keyof R }): Select<R>;
+  selectAny<R extends FieldsBase>(fields: Array<string>): Select<R>;
 
   case(): Case<TQuery>;
   toString(options?: OutputOptions): string;

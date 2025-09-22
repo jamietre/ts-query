@@ -1,7 +1,9 @@
 import { SelectBuilder } from "./selectBuilder.js";
+import { CaseBuilder } from "./caseBuilder.js";
 import type { Query, FieldsBase, FieldsWithStar, OutputOptions } from "./types/query.js";
 import type { Select, FieldAliasMapping } from "./types/select.js";
 import type { Limit } from "./types/limit.js";
+import type { Case } from "./types/case.js";
 
 export class LimitBuilder<T extends FieldsBase> implements Select<T> {
   query: Query<T>;
@@ -28,6 +30,16 @@ export class LimitBuilder<T extends FieldsBase> implements Select<T> {
   select<R extends FieldsBase>(fields: Array<keyof T | FieldAliasMapping<T, R>>): Select<R>;
   select(fields: any): any {
     return new SelectBuilder(this, fields);
+  }
+
+  case(): Case<T> {
+    return new CaseBuilder<T>(this.query);
+  }
+
+  selectAny<R extends FieldsBase>(fields: { [K in string]: keyof R }): Select<R>;
+  selectAny<R extends FieldsBase>(fields: Array<string>): Select<R>;
+  selectAny<R extends FieldsBase>(fields: any): Select<R> {
+    return new SelectBuilder<R>(this.query as any, {}).selectAny(fields);
   }
 
   toString(options?: OutputOptions): string {

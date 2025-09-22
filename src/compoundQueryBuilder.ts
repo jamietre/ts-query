@@ -4,12 +4,14 @@ import { SelectBuilder } from "./selectBuilder.js";
 import { WhereBuilder } from "./whereBuilder.js";
 import { OrderByBuilder } from "./orderByBuilder.js";
 import { LimitBuilder } from "./limitBuilder.js";
+import { CaseBuilder } from "./caseBuilder.js";
 import type { Query, WhereCondition, Queryable, FieldsBase, FieldsWithStar, OutputOptions } from "./types/query.js";
 import type { Join } from "./types/join.js";
 import type { Select, FieldAliasMapping } from "./types/select.js";
 import type { Where } from "./types/where.js";
 import type { OrderBy, OrderDirection } from "./types/orderBy.js";
 import type { Limit } from "./types/limit.js";
+import type { Case } from "./types/case.js";
 
 type FieldMap<T> = {
   [k: string]: keyof T | true;
@@ -41,17 +43,37 @@ export class CompoundQueryBuilder<T extends FieldsBase, U extends FieldsBase> im
   select(fields: any): any {
     return new SelectBuilder<T & U>(this as Query<T & U>, fields);
   }
+
+  case(): Case<T & U> {
+    return new CaseBuilder<T & U>(this as Query<T & U>);
+  }
+
+  selectAny<R extends FieldsBase>(fields: { [K in string]: keyof R }): Select<R>;
+  selectAny<R extends FieldsBase>(fields: Array<string>): Select<R>;
+  selectAny<R extends FieldsBase>(fields: any): Select<R> {
+    return new SelectBuilder<R>(this as any, {}).selectAny(fields);
+  }
   join<V extends FieldsBase, TAlias extends string>(target: string | Queryable<V>, tableAlias: TAlias): Join<T & U, V> {
     if (typeof target === "string") {
       const newQuery = new QueryBuilder<V>({ tableName: target, tableAlias });
-      return new JoinBuilder<T & U, V>({ query1: this, query2: newQuery, joinType: "INNER", outputOptions: this.outputOptions });
+      return new JoinBuilder<T & U, V>({
+        query1: this,
+        query2: newQuery,
+        joinType: "INNER",
+        outputOptions: this.outputOptions,
+      });
     } else {
       // Handle subquery case - create a QueryBuilder that wraps the subquery
       const newQuery = new QueryBuilder<V>({
         tableName: `(${target.toString({ ...this.outputOptions, includeTerminator: false })})`,
         tableAlias: tableAlias,
       });
-      return new JoinBuilder<T & U, V>({ query1: this, query2: newQuery, joinType: "INNER", outputOptions: this.outputOptions });
+      return new JoinBuilder<T & U, V>({
+        query1: this,
+        query2: newQuery,
+        joinType: "INNER",
+        outputOptions: this.outputOptions,
+      });
     }
   }
 
@@ -65,14 +87,24 @@ export class CompoundQueryBuilder<T extends FieldsBase, U extends FieldsBase> im
   leftJoin<V extends FieldsBase>(tableName: string | Queryable<V>, tableAlias: string): Join<T & U, V> {
     if (typeof tableName === "string") {
       const newQuery = new QueryBuilder<V>({ tableName, tableAlias });
-      return new JoinBuilder<T & U, V>({ query1: this, query2: newQuery, joinType: "LEFT", outputOptions: this.outputOptions });
+      return new JoinBuilder<T & U, V>({
+        query1: this,
+        query2: newQuery,
+        joinType: "LEFT",
+        outputOptions: this.outputOptions,
+      });
     } else {
       // Handle subquery case - create a QueryBuilder that wraps the subquery
       const newQuery = new QueryBuilder<V>({
         tableName: `(${tableName.toString({ ...this.outputOptions, includeTerminator: false })})`,
         tableAlias: tableAlias,
       });
-      return new JoinBuilder<T & U, V>({ query1: this, query2: newQuery, joinType: "LEFT", outputOptions: this.outputOptions });
+      return new JoinBuilder<T & U, V>({
+        query1: this,
+        query2: newQuery,
+        joinType: "LEFT",
+        outputOptions: this.outputOptions,
+      });
     }
   }
 

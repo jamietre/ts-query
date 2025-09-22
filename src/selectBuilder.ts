@@ -3,8 +3,10 @@ import { QueryBuilder } from "./queryBuilder.js";
 import { WhereBuilder } from "./whereBuilder.js";
 import { LimitBuilder } from "./limitBuilder.js";
 import { OrderByBuilder } from "./orderByBuilder.js";
+import { CaseBuilder } from "./caseBuilder.js";
 import type { Queryable, FieldsBase, FieldsWithStar, OutputOptions } from "./types/query.js";
 import type { Select, FieldAliasMapping } from "./types/select.js";
+import type { Case } from "./types/case.js";
 
 export class SelectBuilder<T extends FieldsBase> implements Select<T> {
   query: Queryable<T>;
@@ -40,6 +42,32 @@ export class SelectBuilder<T extends FieldsBase> implements Select<T> {
   select<R extends FieldsBase>(fields: Array<keyof T | FieldAliasMapping<T, R>>): Select<R>;
   select(fields: any): any {
     return new SelectBuilder(this.query, fields);
+  }
+
+  selectAny<R extends FieldsBase>(fields: { [K in string]: keyof R }): Select<R>;
+  selectAny<R extends FieldsBase>(fields: Array<string>): Select<R>;
+  selectAny<R extends FieldsBase>(fields: any): Select<R> {
+    // Create a new SelectBuilder that combines current fields with the arbitrary fields
+    const newBuilder = new SelectBuilder<R>(this.query as any, this.fields);
+
+    if (Array.isArray(fields)) {
+      // Handle array of raw SQL expressions
+      fields.forEach((expression: string) => {
+        // Use the expression as both key and value (no alias)
+        (newBuilder.fields as any)[expression] = expression;
+      });
+    } else if (fields && typeof fields === "object") {
+      // Handle object mapping { expression: alias }
+      Object.entries(fields).forEach(([expression, alias]) => {
+        (newBuilder.fields as any)[expression] = alias;
+      });
+    }
+
+    return newBuilder;
+  }
+
+  case(): Case<T> {
+    return new CaseBuilder<T>(this.query);
   }
 
   private getJoinSource(query: Queryable<any>): string {

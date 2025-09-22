@@ -37,6 +37,9 @@ export const queryBuilder = {
   from,
 };
 
+// Export utility functions
+export { field } from "./caseBuilder.js";
+
 // Only export interfaces as the main public API
 export type { Query, WhereCondition, FieldsBase } from "./types/query.js";
 export type { Join, JoinType } from "./types/join.js";
@@ -44,3 +47,4 @@ export type { Select } from "./types/select.js";
 export type { Where, OrCondition, Condition } from "./types/where.js";
 export type { Limit } from "./types/limit.js";
 export type { OrderBy, OrderDirection } from "./types/orderBy.js";
+export type { Case, CaseElse, When } from "./types/case.js";
