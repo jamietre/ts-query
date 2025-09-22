@@ -13,9 +13,11 @@ import {
 describe("JOIN functionality", () => {
   it("should generate INNER JOIN with join method", () => {
     const query = queryBuilder
-      .from<TableFields>("games", "g")
-      .join<TableFields2>("developers", "d")
-      .on({ game_id: "game_id" })
+      .from<TableFields, "g">("games", "g")
+      .join<TableFields2, "d">("developers", "d")
+      .on({
+        "g.game_id": "d.game_id",
+      })
       .select({
         game_id: "id",
         game_name: "name",

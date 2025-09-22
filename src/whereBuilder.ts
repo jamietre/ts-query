@@ -36,7 +36,7 @@ export class WhereBuilder<T extends FieldsBase> implements Where<T> {
     return new SelectBuilder(this, fields);
   }
 
-  join<U extends FieldsBase>(tableName: string | Queryable<U>, tableAlias?: string): Join<T, U> {
+  join<U extends FieldsBase, TAlias extends string>(tableName: string | Queryable<U>, tableAlias: TAlias): Join<T, U> {
     if (typeof tableName === "string") {
       const newQuery = new QueryBuilder<U>({ tableName, tableAlias, aliasGenerator: this.aliasGenerator });
       return new JoinBuilder<T, U>({ query1: this, query2: newQuery, joinType: "INNER" });
@@ -51,11 +51,11 @@ export class WhereBuilder<T extends FieldsBase> implements Where<T> {
     }
   }
 
-  innerJoin<U extends FieldsBase>(entity: string | Queryable<U>, alias?: string): Join<T, U> {
-    return this.join<U>(entity, alias);
+  innerJoin<U extends FieldsBase, TAlias extends string>(entity: string | Queryable<U>, alias: TAlias): Join<T, U> {
+    return this.join<U, TAlias>(entity, alias);
   }
 
-  leftJoin<U extends FieldsBase>(entity: string | Queryable<U>, alias?: string): Join<T, U> {
+  leftJoin<U extends FieldsBase, TAlias extends string>(entity: string | Queryable<U>, alias: TAlias): Join<T, U> {
     if (typeof entity === "string") {
       const newQuery = new QueryBuilder<U>({
         tableName: entity,

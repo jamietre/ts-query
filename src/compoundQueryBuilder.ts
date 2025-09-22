@@ -43,7 +43,7 @@ export class CompoundQueryBuilder<T extends FieldsBase, U extends FieldsBase> im
   select(fields: any): any {
     return new SelectBuilder<T & U>(this as Query<T & U>, fields);
   }
-  join<V extends FieldsBase>(tableName: string | Queryable<V>, tableAlias?: string): Join<T & U, V> {
+  join<V extends FieldsBase>(tableName: string | Queryable<V>, tableAlias: string): Join<T & U, V> {
     if (typeof tableName === "string") {
       const newQuery = new QueryBuilder<V>({ tableName, tableAlias, aliasGenerator: this.aliasGenerator });
       return new JoinBuilder<T & U, V>({ query1: this, query2: newQuery, joinType: "INNER" });
@@ -58,11 +58,11 @@ export class CompoundQueryBuilder<T extends FieldsBase, U extends FieldsBase> im
     }
   }
 
-  innerJoin<V extends FieldsBase>(tableName: string | Queryable<V>, tableAlias?: string): Join<T & U, V> {
+  innerJoin<V extends FieldsBase>(tableName: string | Queryable<V>, tableAlias: string): Join<T & U, V> {
     return this.join<V>(tableName, tableAlias);
   }
 
-  leftJoin<V extends FieldsBase>(tableName: string | Queryable<V>, tableAlias?: string): Join<T & U, V> {
+  leftJoin<V extends FieldsBase>(tableName: string | Queryable<V>, tableAlias: string): Join<T & U, V> {
     if (typeof tableName === "string") {
       const newQuery = new QueryBuilder<V>({ tableName, tableAlias, aliasGenerator: this.aliasGenerator });
       return new JoinBuilder<T & U, V>({ query1: this, query2: newQuery, joinType: "LEFT" });

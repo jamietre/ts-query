@@ -5,10 +5,16 @@ import { OrderBy, OrderDirection } from "./orderBy.js";
 import { Limit } from "../index.js";
 
 // Base type for query fields that includes "*" for selecting all
-export type FieldsBase = {};
+export type FieldsBase = string;
+
+export type TableBase = {};
 
 // Type that allows fields from T or "*" for selecting all fields
 export type FieldsWithStar<T> = keyof T | "*";
+
+export type AliasedFields<TAlias extends string | undefined, U extends TableBase> = TAlias extends undefined
+  ? `${Extract<keyof U, string>}`
+  : `${TAlias}.${Extract<keyof U, string>}`;
 
 // anything that can start a query
 export interface Queryable<T = never> {
@@ -20,20 +26,39 @@ export type AnyQueryable<T extends FieldsBase> = Limit<T> | Where<T> | OrderBy<T
 // A Query represents a table or subquery that can be queried further
 // It extends Select to allow starting with SELECT * FROM ...
 // It extends Queryable to allow using it as a subquery in joins and selects
-export interface Query<T extends FieldsBase> extends Select<T>, Queryable<T> {
+export interface Query<TQuery extends FieldsBase> extends Select<TQuery>, Queryable<TQuery> {
   // Join with table name - requires explicit type parameter
-  join<U extends FieldsBase = never>(tableName: string, tableAlias?: string): Join<T, U>;
-  innerJoin<U extends FieldsBase>(tableName: string, tableAlias?: string): Join<T, U>;
-  leftJoin<U extends FieldsBase>(tableName: string, tableAlias?: string): Join<T, U>;
+  join<TOther extends TableBase, TAlias extends string>(
+    tableName: string,
+    tableAlias: TAlias,
+  ): Join<TQuery, AliasedFields<TAlias, TOther>>;
 
   // Join with subquery - infers type from queryable
-  join<U extends FieldsBase>(subquery: AnyQueryable<U>, alias?: string): Join<T, U>;
-  innerJoin<U extends FieldsBase>(subquery: AnyQueryable<U>, alias?: string): Join<T, U>;
-  leftJoin<U extends FieldsBase>(subquery: AnyQueryable<U>, alias?: string): Join<T, U>;
+  join<TOther extends TableBase, TAlias extends string>(
+    subquery: AnyQueryable<Extract<keyof TOther, string>>,
+    alias: TAlias,
+  ): Join<TQuery, AliasedFields<TAlias, TOther>>;
+  innerJoin<TOther extends TableBase, TAlias extends string>(
+    subquery: AnyQueryable<Extract<keyof TOther, string>>,
+    alias: TAlias,
+  ): Join<TQuery, AliasedFields<TAlias, TOther>>;
+  innerJoin<TOther extends TableBase, TAlias extends string>(
+    tableName: string,
+    tableAlias: TAlias,
+  ): Join<TQuery, AliasedFields<TAlias, TOther>>;
 
-  where(conditions: WhereCondition<T>): Where<T>;
-  orderBy(field: keyof T, direction?: OrderDirection): OrderBy<T>;
-  limit(count: number, offset?: number): Limit<T>;
+  leftJoin<TOther extends TableBase, TAlias extends string>(
+    subquery: AnyQueryable<Extract<keyof TOther, string>>,
+    alias: TAlias,
+  ): Join<TQuery, AliasedFields<TAlias, TOther>>;
+  leftJoin<TOther extends TableBase, TAlias extends string>(
+    tableName: string,
+    tableAlias: TAlias,
+  ): Join<TQuery, AliasedFields<TAlias, TOther>>;
+
+  where(conditions: WhereCondition<TQuery>): Where<TQuery>;
+  orderBy(field: keyof TQuery, direction?: OrderDirection): OrderBy<TQuery>;
+  limit(count: number, offset?: number): Limit<TQuery>;
 }
 
 export type WhereCondition<T extends FieldsBase> = Condition<T> & {
