@@ -1,34 +1,33 @@
 // Main entry point for ts-query package
-import { AliasGenerator } from "./aliasGenerator.js";
 import { QueryBuilder } from "./queryBuilder.js";
-import type { AnyQueryable, Query, Queryable, FieldsBase, AliasedFields, TableBase } from "./types/query.js";
+import type { AnyQueryable, Query, Queryable, AliasedFields, FieldsBase } from "./types/query.js";
 
 // Create proper overloaded from function
 // The overload for inferring from Queryable<T> must specify the actual types exposed, or inference of the generic
 // type will not work correctly and T is always returned as "object"
 // It seems OK to use Queryable<T> in the actual signature.
 
-function from<T extends TableBase, TAlias extends string>(
+function from<T extends FieldsBase, TAlias extends string>(
   tableName: string,
   tableAlias: TAlias,
 ): Query<AliasedFields<TAlias, T>>;
-
+function from<T extends FieldsBase>(tableName: string): Query<AliasedFields<undefined, T>>;
 function from<T extends FieldsBase, TAlias extends string>(
   subquery: AnyQueryable<T>,
   tableAlias: TAlias,
 ): Query<AliasedFields<TAlias, T>>;
-function from<T extends TableBase, TAlias extends string>(
+function from<T extends FieldsBase>(subquery: AnyQueryable<T>): Query<AliasedFields<undefined, T>>;
+function from<T extends FieldsBase, TAlias extends string | undefined>(
   tableName: string | Queryable<T>,
-  tableAlias: TAlias,
+  tableAlias?: TAlias,
 ): Query<AliasedFields<TAlias, T>> {
   if (typeof tableName === "string") {
-    return new QueryBuilder<AliasedFields<TAlias, T>>({ tableName, tableAlias, aliasGenerator: new AliasGenerator() });
+    return new QueryBuilder<AliasedFields<TAlias, T>>({ tableName, tableAlias });
   } else {
     // Handle subquery case - create a QueryBuilder that wraps the subquery
     return new QueryBuilder<AliasedFields<TAlias, T>>({
       tableName: `(${tableName.toString()})`,
-      tableAlias: tableAlias || new AliasGenerator().generate(),
-      aliasGenerator: new AliasGenerator(),
+      tableAlias: tableAlias,
     });
   }
 }

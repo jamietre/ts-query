@@ -8,7 +8,7 @@ type FieldMap<T> = {
 
 export interface Join<T extends FieldsBase, U extends FieldsBase> {
   // Original on() method for immediate join without field selection
-  on(condition: Partial<Record<T, U>>): Query<T & U>;
+  on(condition: Partial<Record<keyof T, keyof U>>): Query<T & U>;
 }
 
 export interface JoinWithFields<
@@ -16,5 +16,5 @@ export interface JoinWithFields<
   TJoined extends FieldsBase,
   TMapped extends FieldsBase = TJoined,
 > {
-  on(condition: Partial<Record<TMain, TJoined>>): Query<TMain & TMapped>;
+  on(condition: Partial<Record<keyof TMain, keyof TJoined>>): Query<TMain & TMapped>;
 }

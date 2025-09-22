@@ -14,18 +14,11 @@ export class WhereBuilder<T extends FieldsBase> implements Where<T> {
   readonly query: Query<T>;
   readonly conditions: WhereCondition<T>;
   readonly orConditions: OrCondition<T>[] = [];
-  readonly aliasGenerator: AliasGenerator;
 
-  constructor(options: {
-    aliasGenerator: AliasGenerator;
-    query: Query<T>;
-    conditions: WhereCondition<T>;
-    orConditions: OrCondition<T>[];
-  }) {
+  constructor(options: { query: Query<T>; conditions: WhereCondition<T>; orConditions: OrCondition<T>[] }) {
     this.query = options.query;
     this.conditions = options.conditions;
     this.orConditions = options.orConditions;
-    this.aliasGenerator = options.aliasGenerator;
   }
 
   select(fields: Array<FieldsWithStar<T> | Partial<Record<FieldsWithStar<T>, string | true>>>): Select<T>;
@@ -38,14 +31,13 @@ export class WhereBuilder<T extends FieldsBase> implements Where<T> {
 
   join<U extends FieldsBase, TAlias extends string>(tableName: string | Queryable<U>, tableAlias: TAlias): Join<T, U> {
     if (typeof tableName === "string") {
-      const newQuery = new QueryBuilder<U>({ tableName, tableAlias, aliasGenerator: this.aliasGenerator });
+      const newQuery = new QueryBuilder<U>({ tableName, tableAlias });
       return new JoinBuilder<T, U>({ query1: this, query2: newQuery, joinType: "INNER" });
     } else {
       // Handle subquery case - create a QueryBuilder that wraps the subquery
       const newQuery = new QueryBuilder<U>({
         tableName: `(${tableName.toString()})`,
         tableAlias,
-        aliasGenerator: this.aliasGenerator,
       });
       return new JoinBuilder<T, U>({ query1: this, query2: newQuery, joinType: "INNER" });
     }
@@ -59,22 +51,19 @@ export class WhereBuilder<T extends FieldsBase> implements Where<T> {
     if (typeof entity === "string") {
       const newQuery = new QueryBuilder<U>({
         tableName: entity,
-        tableAlias: alias || new AliasGenerator().generate(),
-        aliasGenerator: this.aliasGenerator,
+        tableAlias: alias,
       });
       return new JoinBuilder<T, U>({ query1: this, query2: newQuery, joinType: "LEFT" });
     } else {
       // Handle subquery case - create a QueryBuilder that wraps the subquery
       const newQuery = new QueryBuilder<U>({
         tableName: `(${entity.toString()})`,
-        tableAlias: alias || new AliasGenerator().generate(),
-        aliasGenerator: this.aliasGenerator,
+        tableAlias: alias,
       });
       return new JoinBuilder<T, U>({
         query1: this,
         query2: newQuery,
         joinType: "LEFT",
-        aliasGenerator: this.aliasGenerator,
       });
     }
   }
@@ -86,7 +75,6 @@ export class WhereBuilder<T extends FieldsBase> implements Where<T> {
       query: this.query,
       conditions: mergedConditions,
       orConditions: this.orConditions,
-      aliasGenerator: this.aliasGenerator,
     });
   }
 
@@ -100,22 +88,18 @@ export class WhereBuilder<T extends FieldsBase> implements Where<T> {
       query: this.query,
       conditions: this.conditions,
       orConditions: newOrConditions,
-      aliasGenerator: this.aliasGenerator,
     });
   }
 
   orderBy(field: keyof T, direction: OrderDirection = "ASC"): OrderBy<T> {
-    return new OrderByBuilder<T>({ query: this, field, direction, aliasGenerator: this.aliasGenerator });
+    return new OrderByBuilder<T>({ query: this, field, direction });
   }
 
   limit(count: number, offset?: number): Limit<T> {
-    return new LimitBuilder<T>({ query: this, limit: count, offset, aliasGenerator: this.aliasGenerator });
+    return new LimitBuilder<T>({ query: this, limit: count, offset });
   }
 
   toString(): string {
     return this.select(["*"]).toString();
   }
 }
-
-// Need to import QueryBuilder here to avoid circular dependency
-import { AliasGenerator } from "./aliasGenerator.js";
