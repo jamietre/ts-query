@@ -75,10 +75,13 @@ export class SelectBuilder<T extends FieldsBase> implements Select<T> {
 
   private getSource(query: Queryable<any>): string {
     if (query instanceof QueryBuilder) {
-      // Only emit alias if the overall query context has joins OR if this is a subquery
+      // Only emit alias if the overall query context has joins OR if this is a subquery OR if an alias was explicitly provided
       const hasJoins = this.queryHasJoins(this.query);
       const isSubquery = query.tableName.startsWith("(");
-      return hasJoins || isSubquery ? `${query.tableName} AS ${query.tableAlias}` : query.tableName;
+      const hasExplicitAlias = query.tableAlias !== undefined;
+      return hasJoins || isSubquery || hasExplicitAlias ?
+        (isSubquery ? `${query.tableName} AS ${query.tableAlias}` : `${query.tableName} ${query.tableAlias}`) :
+        query.tableName;
     } else if (query instanceof CompoundQueryBuilder) {
       const left = this.getSource(query.query1);
       const on = Object.entries(query.joinInfo.condition || {})
@@ -124,8 +127,8 @@ export class SelectBuilder<T extends FieldsBase> implements Select<T> {
   }
 
   private formatCondition(key: string, value: any, tableAlias: string | undefined): string {
-    // Use key as-is if it already contains dot notation, otherwise add table alias
-    const fieldName = key.includes(".") ? key : `${tableAlias}.${key}`;
+    // Use key as-is if it already contains dot notation, otherwise add table alias if available
+    const fieldName = key.includes(".") ? key : (tableAlias ? `${tableAlias}.${key}` : key);
 
     if (typeof value === "object" && value !== null && !Array.isArray(value)) {
       // Handle operators like $gt, $lt, etc.
@@ -134,6 +137,10 @@ export class SelectBuilder<T extends FieldsBase> implements Select<T> {
         const [operator, operatorValue] = entries[0];
         switch (operator) {
           case "$eq":
+            // Handle $eq with null as IS NULL
+            if (operatorValue == undefined) {
+              return `${fieldName} IS NULL`;
+            }
             return `${fieldName} = ${this.formatValue(operatorValue)}`;
           case "$gt":
             return `${fieldName} > ${this.formatValue(operatorValue)}`;
@@ -144,6 +151,10 @@ export class SelectBuilder<T extends FieldsBase> implements Select<T> {
           case "$lte":
             return `${fieldName} <= ${this.formatValue(operatorValue)}`;
           case "$ne":
+            // Handle $ne with null as IS NOT NULL
+            if (operatorValue == undefined) {
+              return `${fieldName} IS NOT NULL`;
+            }
             return `${fieldName} != ${this.formatValue(operatorValue)}`;
           case "$in":
             return `${fieldName} IN (${Array.isArray(operatorValue) ? operatorValue.map((v) => this.formatValue(v)).join(", ") : this.formatValue(operatorValue)})`;
@@ -154,6 +165,12 @@ export class SelectBuilder<T extends FieldsBase> implements Select<T> {
         }
       }
     }
+
+    // Handle null/undefined values - use IS NULL instead of = null
+    if (value == undefined) {
+      return `${fieldName} IS NULL`;
+    }
+
     return `${fieldName} = ${this.formatValue(value)}`;
   }
 
@@ -277,7 +294,10 @@ export class SelectBuilder<T extends FieldsBase> implements Select<T> {
       const orderFields = query.orderFields
         .map(({ field, direction }) => {
           const tableAlias = this.getRightmostTableAlias(query.query);
-          return `${tableAlias}.${String(field)} ${direction}`;
+          const fieldName = String(field);
+          // Use field as-is if it already contains dot notation, otherwise add table alias if available
+          const fullFieldName = fieldName.includes(".") ? fieldName : (tableAlias ? `${tableAlias}.${fieldName}` : fieldName);
+          return `${fullFieldName} ${direction}`;
         })
         .join(", ");
       return `ORDER BY ${orderFields}`;

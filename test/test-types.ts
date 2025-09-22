@@ -1,6 +1,7 @@
 export type TableFields = {
   game_id: number;
   game_name: string;
+  optional_field?: string | null;
   release_year: number;
 };
 

@@ -2,15 +2,18 @@ import { Limit } from "./limit.js";
 import { OrderBy, OrderDirection } from "./orderBy.js";
 import type { WhereCondition, Queryable, Query, FieldsBase } from "./query.js";
 
+// Treat undefined/null as the same for SQL purposes
+type AnyNull<T> = T extends null | undefined ? T | null | undefined : T;
+
 export type Condition<T extends FieldsBase> = {
   [K in keyof T]?:
-    | T[K]
-    | { $eq: T[K] }
+    | AnyNull<T[K]>
+    | { $eq: AnyNull<T[K]> }
     | { $gt: T[K] }
     | { $lt: T[K] }
     | { $gte: T[K] }
     | { $lte: T[K] }
-    | { $ne: T[K] }
+    | { $ne: AnyNull<T[K]> }
     | { $in: T[K][] }
     | { $like: string };
 };

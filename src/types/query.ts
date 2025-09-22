@@ -12,7 +12,7 @@ export type FieldsBase = {};
 export type FieldsWithStar<T> = keyof T | "*";
 
 export type AliasedFields<TAlias extends string | undefined, U extends FieldsBase> = TAlias extends undefined
-  ? { [K in keyof U]: `${K & string}` }
+  ? U
   : { [K in keyof U as `${TAlias}.${K & string}`]: U[K] };
 
 // anything that can start a query
